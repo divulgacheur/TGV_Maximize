@@ -2,7 +2,7 @@
 
 ## Setup
 
-Fill the `.env` file with 
+Fill the `.env` file with your cookies contents, your birthdate, your TGVMax card number.
 
 ## Run
 ```
