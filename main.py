@@ -163,36 +163,36 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                                                     arrival_direct_destinations)  # + [PARIS]
 
         for intermediate_station in intermediate_stations:
+            if intermediate_station['station'].is_in_france():  # check for segments between station located in France only
+                # farther_station = Station.get_farther_station(departure_direct_destinations, arrival_direct_destinations, intermediate_station)
 
-            farther_station = Station.get_farther_station(departure_direct_destinations, arrival_direct_destinations,
-                                                          intermediate_station)
-            # To optimize the search, we first search for the longest segment (most demanded than the shortest and
-            # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
-            # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
-            # segment is rare
-            print('Via', intermediate_station['station'].name) if not quiet else None
-            first_segment = get_available_seats_next_x_days(departure_code,
-                                                            intermediate_station['station'].name_to_code()[0],
-                                                            day, verbosity=verbosity, quiet=quiet)
-            if first_segment:  # we try to find second segment only if first segment is not empty
-                if verbosity:
-                    print('First segments found :')
-                    for proposal in first_segment:
-                        proposal.print()
-                second_segment = get_available_seats_next_x_days(intermediate_station['station'].name_to_code()[0],
-                                                                 arrival_code,
-                                                                 day, verbosity=verbosity, quiet=quiet)
-
-                if second_segment:
+                # To optimize the search, we first search for the longest segment (most demanded than the shortest and
+                # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
+                # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
+                # segment is rare
+                print('Via', intermediate_station['station'].name) if not quiet else None
+                first_segment = get_available_seats_next_x_days(departure_code,
+                                                                intermediate_station['station'].name_to_code()[0],
+                                                                day, verbosity=verbosity, quiet=quiet)
+                if first_segment:  # we try to find second segment only if first segment is not empty
                     if verbosity:
-                        print('Second segments found :')
-                        for proposal in second_segment:
+                        print('First segments found :')
+                        for proposal in first_segment:
                             proposal.print()
-                    for first_proposal in first_segment:
-                        for second_proposal in second_segment:
-                            if second_proposal.departure_date > first_proposal.arrival_date:
-                                journey = MultipleProposals(first_proposal, second_proposal)
-                                journey.display()
+                    second_segment = get_available_seats_next_x_days(intermediate_station['station'].name_to_code()[0],
+                                                                     arrival_code,
+                                                                     day, verbosity=verbosity, quiet=quiet)
+
+                    if second_segment:
+                        if verbosity:
+                            print('Second segments found :')
+                            for proposal in second_segment:
+                                proposal.print()
+                        for first_proposal in first_segment:
+                            for second_proposal in second_segment:
+                                if second_proposal.departure_date > first_proposal.arrival_date:
+                                    journey = MultipleProposals(first_proposal, second_proposal)
+                                    journey.display()
 
 
 def _help():
