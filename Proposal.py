@@ -27,7 +27,7 @@ class Proposal:
         self.arrival_station = arrival_station
         self.transporter = transporter
         self.vehicle_number = vehicle_number
-        self.remaining_seats = remaining_seats
+        self.remaining_seats = remaining_seats if remaining_seats is not None else 999
 
     @staticmethod
     def parse_proposal(proposal: any):
@@ -61,7 +61,10 @@ class Proposal:
         """
         return response.json()['travelProposals'][-1]['departureDate']
 
-    def print(self: 'Proposal') -> None:
+    def display_seats(self) -> str:
+        return str(self.remaining_seats if self.remaining_seats < 999 else 'more than 10') + ' seats remaining'
+
+    def print(self) -> None:
         """
         Print journey proposal, date, location, train information & price
         :proposal: Proposal
@@ -73,7 +76,7 @@ class Proposal:
             f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")}) '
             f'{self.transporter} '
             f'{self.vehicle_number}',
-            f'{self.remaining_seats}' if self.remaining_seats is not None else 'more than 10', 'seats remaining',
+            f'{self.display_seats()} '
             f'{BColors.ENDC}'
         )
 

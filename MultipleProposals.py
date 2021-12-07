@@ -14,13 +14,18 @@ class MultipleProposals:
 
         print(
             f'{BColors.OKGREEN}'
-            f'{first.departure_station.name}' f' ({first.departure_date.strftime("%H:%M")}) -> '
-            f'{first.arrival_station.name} ({first.arrival_date.strftime("%H:%M")})', end='')
+            f'{first.departure_station.name}' 
+            f'({first.departure_date.strftime("%H:%M")}) → '
+            f'{first.arrival_station.name} ({first.arrival_date.strftime("%H:%M")}) ', end='')
 
-        if second.departure_station.code != first.arrival_station.code:  # if connections stations are different, i.e. Nimes <-> Nimes Pont du Gard
-            print(f' : {second.departure_station.name} ({second.departure_date.strftime("%H:%M")})',
-                  end='')  # display the name of two connection stations
+        # If connections stations are different, i.e. Nimes <-> Nimes Pont du Gard
+        if second.departure_station.code != first.arrival_station.code:
+            print(f' ⭾ {second.departure_station.name} ({second.departure_date.strftime("%H:%M")}) ',
+                  end='')  # Display the name of two connection stations
         else:
-            print(f' ({second.departure_date.strftime("%H:%M")})', end='')  # if not, display the station name only once
-        print(f' -> {second.arrival_station.name} ({second.arrival_date.strftime("%H:%M")})'
-              f'{BColors.ENDC}')
+            print(f'({second.departure_date.strftime("%H:%M")}) ', end='')  # If not, display only the station name once
+        print(
+            f'→ {second.arrival_station.name} ({second.arrival_date.strftime("%H:%M")}) '
+            f'| {second.display_seats() if second.remaining_seats < first.remaining_seats else first.display_seats()} '
+            f'{BColors.ENDC}'
+            )
