@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import argparse
 from os.path import join, dirname
 from dotenv import load_dotenv
 
@@ -8,7 +9,6 @@ from time import sleep
 from json import dumps as json_dumps
 from locale import setlocale, LC_TIME
 from requests import get, session
-import threading
 
 from datetime import datetime, timedelta
 from operator import itemgetter
@@ -38,7 +38,7 @@ s = session()
 s.get("https://www.oui.sncf/")
 
 
-def get_next_proposals(departure_station, arrival_station, departure_date):
+def get_next_proposals(departure_station, arrival_station, departure_date, verbosity, quiet):
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0',
         'Accept': '*/*',
@@ -78,22 +78,27 @@ def get_next_proposals(departure_station, arrival_station, departure_date):
     return response
 
 
-def get_available_seats_next_x_days(departure_station: str, arrival_station: str, day: datetime) -> [Proposal]:
+def get_available_seats_next_x_days(departure_station: str, arrival_station: str, day: datetime, verbosity, quiet) -> [
+    Proposal]:
     """
     Returns stations that are searched with the provided term
 
     The further forward the station is in the list, the higher the similarity to the search term.
 
+
     :param departure_station: station of departure
     :param arrival_station: station of arrival
     :param day: date of departure
+    :param quiet:
+    :param verbosity:
 
     :return: List of journey 'Proposal' objects
-
     """
+    page_count = 0
     all_proposals = []
 
-    response = get_next_proposals(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'))
+    response = get_next_proposals(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'), verbosity,
+                                  quiet)
 
     response_json = response.json()
     sleep(1)
@@ -102,19 +107,22 @@ def get_available_seats_next_x_days(departure_station: str, arrival_station: str
         all_proposals = Proposal.filter_proposals(response_json['travelProposals'], direct_journey_max_duration)
 
         while response_json['nextPagination'] and response_json['nextPagination']['type'] != 'NEXT_DAY':
-            response = get_next_proposals(departure_station, arrival_station, Proposal.get_last_timetable(response))
+            print('Next page', page_count) if verbosity else None
+            response = get_next_proposals(departure_station, arrival_station, Proposal.get_last_timetable(response),
+                                          verbosity, quiet)
             response_json = response.json()
+            page_count += 1
             sleep(1)
-        if response_json is not None and 'travelProposals' in response_json:
-            all_proposals.extend(
-                Proposal.filter_proposals(response_json['travelProposals'], direct_journey_max_duration))
-    return Proposal.remove_duplicates(all_proposals) if all_proposals is not None else []
+            if response_json is not None and 'travelProposals' in response_json:
+                all_proposals.extend(
+                    Proposal.filter_proposals(response_json['travelProposals'], direct_journey_max_duration))
+    return Proposal.remove_duplicates(all_proposals, verbosity) if all_proposals is not None else []
 
 
 def get_common_stations(departure_direct_destinations: DirectDestination,
                         arrival_direct_destinations: DirectDestination) -> [Station]:
     print("Let's try to split the journey from", departure_direct_destinations.station.name, 'to',
-          arrival_direct_destinations.station.name)
+          arrival_direct_destinations.station.name, end=' : ')
 
     destinations_keys = set(departure_direct_destinations.destinations.keys()).intersection(
         arrival_direct_destinations.destinations.keys())
@@ -126,7 +134,7 @@ def get_common_stations(departure_direct_destinations: DirectDestination,
     return destinations
 
 
-def total_search(departure_name, arrival_name, days, days_delta):
+def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, verbosity: bool, quiet: bool):
     date = datetime.now().replace(hour=0, minute=0) + timedelta(days=days_delta)
 
     departure_code, formal_departure_name = Station.name_to_code(Station(departure_name))
@@ -146,7 +154,7 @@ def total_search(departure_name, arrival_name, days, days_delta):
         print(day.strftime("%c"))
 
         print('Direct journey from', formal_departure_name, 'to', formal_arrival_name)
-        direct = get_available_seats_next_x_days(departure_code, arrival_code, day)
+        direct = get_available_seats_next_x_days(departure_code, arrival_code, day, verbosity, quiet)
         if direct:
             for proposal in direct:
                 proposal.print()
@@ -162,16 +170,24 @@ def total_search(departure_name, arrival_name, days, days_delta):
             # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
             # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
             # segment is rare
-            print('\n' + 'Via', intermediate_station['station'].name)
+            print('Via', intermediate_station['station'].name) if not quiet else None
             first_segment = get_available_seats_next_x_days(departure_code,
                                                             intermediate_station['station'].name_to_code()[0],
-                                                            day)
+                                                            day, verbosity=verbosity, quiet=quiet)
             if first_segment:  # we try to find second segment only if first segment is not empty
+                if verbosity:
+                    print('First segments found :')
+                    for proposal in first_segment:
+                        proposal.print()
                 second_segment = get_available_seats_next_x_days(intermediate_station['station'].name_to_code()[0],
                                                                  arrival_code,
-                                                                 day)
+                                                                 day, verbosity=verbosity, quiet=quiet)
 
                 if second_segment:
+                    if verbosity:
+                        print('Second segments found :')
+                        for proposal in second_segment:
+                            proposal.print()
                     for first_proposal in first_segment:
                         for second_proposal in second_segment:
                             if second_proposal.departure_date > first_proposal.arrival_date:
@@ -187,15 +203,19 @@ def _help():
 def main():
     args = argv
     try:
-        departure = args[1]
-        arrival = args[2]
-        days_delta = int(args[3])
+        parser = argparse.ArgumentParser()
+        parser.add_argument("stations", metavar="station", help="Station names", nargs=2)
+        parser.add_argument("-t", "--timedelta", help="Number of days to search", type=int, default=1)
+        parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
+        parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
+        args = parser.parse_args()
+
 
     except ValueError:
         _help()
         exit(1)
 
-    total_search(departure, arrival, 1, days_delta)
+    total_search(args.stations[0], args.stations[1], 1, args.timedelta, verbosity=args.verbosity, quiet=args.quiet)
 
 
 if __name__ == '__main__':
