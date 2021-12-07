@@ -67,15 +67,15 @@ class Proposal:
         :proposal: Proposal
         :return: None
         """
-
-        print(BColors.OKGREEN + str(self.departure_date), '=>', self.arrival_date,
-              str(int(self.duration // 60)) + 'h' + str(int(self.duration % 60)).zfill(2),
-              self.minPrice, '€',
-              self.transporter,
-              self.vehicle_number,
-              str(self.remaining_seats) if self.remaining_seats is not None else 'more than 10',
-              'seats remaining',
-              BColors.ENDC)
+        print(
+            f'{BColors.OKGREEN}'
+            f'{self.departure_station.name}' f' ({self.departure_date.strftime("%H:%M")}) → '
+            f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")}) '
+            f'{self.transporter} '
+            f'{self.vehicle_number}',
+            f'{self.remaining_seats}' if self.remaining_seats is not None else 'more than 10', 'seats remaining',
+            f'{BColors.ENDC}'
+        )
 
     @staticmethod
     def filter_proposals(proposals: list[any], direct_journey_max_duration: int, get_unavailable: bool = False,
@@ -100,14 +100,19 @@ class Proposal:
         return filtered_proposals
 
     @staticmethod
-    def remove_duplicates(all_proposals):
+    def remove_duplicates(all_proposals, verbosity):
         filtered_proposals = []
+        removed_count = 0
         for index, proposal in enumerate(all_proposals):
             if index != 0:
                 latest_proposal = all_proposals[index - 1]
-                if proposal.departure_date != latest_proposal.departure_date and proposal.duration != latest_proposal.duration:  # Do not add duplicate proposals where departure_date and duration are the same
+                if proposal.departure_date != latest_proposal.departure_date and \
+                        proposal.duration != latest_proposal.duration:
+                    # Do not add duplicate proposals where departure_date and duration are the same
                     filtered_proposals.append(proposal)
+                else:
+                    removed_count += 1
             else:
                 filtered_proposals.append(proposal)
-
+        print(removed_count, 'duplicates removed') if verbosity else None
         return filtered_proposals
