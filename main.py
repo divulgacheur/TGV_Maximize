@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 import argparse
+from os import environ
 from os.path import join, dirname
 from dotenv import load_dotenv
 
-from os import environ as env
 from sys import argv
 from time import sleep
 from json import dumps as json_dumps
@@ -28,14 +28,10 @@ direct_journey_max_duration = 0
 setlocale(LC_TIME, "fr_FR.UTF-8")
 client = HafasClient(DBProfile())
 
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
-OUISNCF_COOKIE = env.get("OUISNCF_COOKIE")
-TGVMAX_CARD_NUMBER = env.get("TGVMAX_CARD_NUMBER")
-BIRTH_DATE = env.get("BIRTH_DATE")
-
 s = session()
 s.get("https://www.oui.sncf/")
+
+ENV_VALUES = dict(**dict.fromkeys(["OUISNCF_COOKIE",  "TGVMAX_CARD_NUMBER", "BIRTH_DATE"], None))
 
 
 def get_next_proposals(departure_station, arrival_station, departure_date, verbosity, quiet):
@@ -56,7 +52,7 @@ def get_next_proposals(departure_station, arrival_station, departure_date, verbo
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'same-origin',
         'TE': 'trailers',
-        'Cookie': OUISNCF_COOKIE
+        'Cookie': ENV_VALUES['OUISNCF_COOKIE']
     }
     data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': departure_date}}},
             'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
@@ -66,14 +62,16 @@ def get_next_proposals(departure_station, arrival_station, departure_date, verbo
                      'schedule': {'outward': departure_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
                                   'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND', 'passengers': [
                     {'id': '0', 'typology': 'YOUNG', 'customerId': '', 'firstname': '', 'lastname': '',
-                     'dateOfBirth': BIRTH_DATE, 'age': 21,
-                     'discountCards': [{'code': 'HAPPY_CARD', 'number': TGVMAX_CARD_NUMBER, 'dateOfBirth': BIRTH_DATE}],
+                     'dateOfBirth': ENV_VALUES['BIRTH_DATE'], 'age': 21,
+                     'discountCards': [{'code': 'HAPPY_CARD', 'number': ENV_VALUES['TGVMAX_CARD_NUMBER'], 'dateOfBirth': ENV_VALUES['BIRTH_DATE']}],
                      'promoCode': '', 'bicycle': None}], 'checkBestPrices': False, 'salesMarket': 'fr-FR',
                      'channel': 'web', 'pets': [], 'context': {'sumoForTrain': {'eligible': True}}}}
 
     response = s.post('https://www.oui.sncf/api/vsd/travels/outward/train/next', headers=headers, data=json_dumps(data))
     if response.status_code != 200:
         print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
+        if response.status_code == 403:
+            print('Too many requests. Resolve captcha at https://www.oui.sncf/billet-train and try again in a few minutes.')
         exit('Error in proposal request')
     return response
 
@@ -163,7 +161,8 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                                                     arrival_direct_destinations)  # + [PARIS]
 
         for intermediate_station in intermediate_stations:
-            if intermediate_station['station'].is_in_france():  # check for segments between station located in France only
+            if intermediate_station[
+                'station'].is_in_france():  # check for segments between station located in France only
                 # farther_station = Station.get_farther_station(departure_direct_destinations, arrival_direct_destinations, intermediate_station)
 
                 # To optimize the search, we first search for the longest segment (most demanded than the shortest and
@@ -210,10 +209,19 @@ def main():
         parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
         args = parser.parse_args()
 
-
     except ValueError:
         _help()
         exit(1)
+
+    dotenv_path = join(dirname(__file__), '.env')
+    load_dotenv(dotenv_path)
+
+    for env_value in ENV_VALUES.keys():
+        if environ.get(env_value) is None:
+            raise ValueError("Missing environment variable {}".format(env_value))
+        else:
+            ENV_VALUES[env_value] = environ.get(env_value)
+
 
     total_search(args.stations[0], args.stations[1], 1, args.timedelta, verbosity=args.verbosity, quiet=args.quiet)
 
