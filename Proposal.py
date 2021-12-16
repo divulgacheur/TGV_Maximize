@@ -15,7 +15,7 @@ class Proposal:
     arrival_station: Station
     transporter: str
     vehicle_number: str
-    remaining_seats: int
+    remaining_seats: dict
 
     def __init__(self, duration, min_price, departure_date, departure_station, arrival_date, arrival_station,
                  transporter, vehicle_number, remaining_seats):
@@ -27,7 +27,19 @@ class Proposal:
         self.arrival_station = arrival_station
         self.transporter = transporter
         self.vehicle_number = vehicle_number
-        self.remaining_seats = remaining_seats if remaining_seats is not None else 999
+        self.remaining_seats = remaining_seats
+
+    @staticmethod
+    def parse_intercites_de_nuit_offers(second_class_offers: any) -> dict:
+        remaining_seats = {}
+        for offer in second_class_offers['offers']:
+            if offer['amount'] == 0:
+                placement_modes = offer['offerSegments'][0]['placement']['availablePlacementModes']
+                if placement_modes[1]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # BERTH_SECOND
+                    remaining_seats['berths'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
+                elif placement_modes[2]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # SEAT_SECOND
+                    remaining_seats['seats'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
+        return remaining_seats
 
     @staticmethod
     def parse_proposal(proposal: any):
@@ -47,7 +59,11 @@ class Proposal:
                                   )
         transporter = proposal['secondClassOffers']['offers'][0]['offerSegments'][0]['transporter']
         vehicle_number = proposal['secondClassOffers']['offers'][0]['offerSegments'][0]['vehicleNumber']
-        remaining_seats = proposal['secondClassOffers']['offers'][0]['remainingSeats']
+        if transporter == 'INTERCITES DE NUIT':  # Intercites de nuit offers are parsed differently than other offers
+            remaining_seats = Proposal.parse_intercites_de_nuit_offers(proposal['secondClassOffers'])
+        else:
+            seats = proposal['secondClassOffers']['offers'][0]['remainingSeats']
+            remaining_seats = {'seats': seats if seats is not None else 999}
 
         return Proposal(duration, min_price, departure_date, departure_station, arrival_date, arrival_station,
                         transporter, vehicle_number, remaining_seats)
@@ -62,7 +78,10 @@ class Proposal:
         return response.json()['travelProposals'][-1]['departureDate']
 
     def display_seats(self) -> str:
-        return str(self.remaining_seats if self.remaining_seats < 999 else 'more than 10') + ' seats remaining'
+        return " ".join(
+            [(str(count) if count < 999 else 'more than 10') + ' ' + physical_space + ' remaining'
+             for physical_space, count in self.remaining_seats.items()
+             ])
 
     def print(self) -> None:
         """
@@ -119,3 +138,9 @@ class Proposal:
                 filtered_proposals.append(proposal)
         print(removed_count, 'duplicates removed') if verbosity else None
         return filtered_proposals
+
+    def get_remaining_seats(self) -> int:
+        """
+        Return remaining seats count for a proposal that can contain multiple physical spaces
+        """
+        return max(self.remaining_seats.keys())

@@ -26,6 +26,6 @@ class MultipleProposals:
             print(f'({second.departure_date.strftime("%H:%M")}) ', end='')  # If not, display only the station name once
         print(
             f'→ {second.arrival_station.name} ({second.arrival_date.strftime("%H:%M")}) '
-            f'| {second.display_seats() if second.remaining_seats < first.remaining_seats else first.display_seats()} '
+            f'| {second.display_seats() if second.get_remaining_seats() < first.get_remaining_seats() else first.display_seats()} '
             f'{BColors.ENDC}'
             )
