@@ -1,37 +1,28 @@
 #!/usr/bin/python3
 import argparse
-from os import environ
-from os.path import join, dirname
-from dotenv import load_dotenv
-
-from sys import argv
-from time import sleep
+from datetime import datetime, timedelta
 from json import dumps as json_dumps
 from locale import setlocale, LC_TIME
-from requests import get, session
-
-from datetime import datetime, timedelta
 from operator import itemgetter
+from time import sleep
 
 from pyhafas import HafasClient
 from pyhafas.profile import DBProfile
+from requests import get, session
 
 from BColors import BColors
 from DirectDestination import DirectDestination
 from MultipleProposals import MultipleProposals
-from Station import Station
 from Proposal import Proposal
+from Station import Station
+from config import Config
 
-DISPLAY_NON_TGVMAX = False
-DISPLAY_UNAVAILABLE = False
 direct_journey_max_duration = 0
 setlocale(LC_TIME, "fr_FR.UTF-8")
 client = HafasClient(DBProfile())
 
 s = session()
 s.get("https://www.oui.sncf/")
-
-ENV_VALUES = dict(**dict.fromkeys(["OUISNCF_COOKIE",  "TGVMAX_CARD_NUMBER", "BIRTH_DATE"], None))
 
 
 def get_next_proposals(departure_station, arrival_station, departure_date, verbosity, quiet):
@@ -52,7 +43,7 @@ def get_next_proposals(departure_station, arrival_station, departure_date, verbo
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'same-origin',
         'TE': 'trailers',
-        'Cookie': ENV_VALUES['OUISNCF_COOKIE']
+        'Cookie': Config.OUISNCF_COOKIE
     }
     data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': departure_date}}},
             'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
@@ -62,16 +53,20 @@ def get_next_proposals(departure_station, arrival_station, departure_date, verbo
                      'schedule': {'outward': departure_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
                                   'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND', 'passengers': [
                     {'id': '0', 'typology': 'YOUNG', 'customerId': '', 'firstname': '', 'lastname': '',
-                     'dateOfBirth': ENV_VALUES['BIRTH_DATE'], 'age': 21,
-                     'discountCards': [{'code': 'HAPPY_CARD', 'number': ENV_VALUES['TGVMAX_CARD_NUMBER'], 'dateOfBirth': ENV_VALUES['BIRTH_DATE']}],
-                     'promoCode': '', 'bicycle': None}], 'checkBestPrices': False, 'salesMarket': 'fr-FR',
-                     'channel': 'web', 'pets': [], 'context': {'sumoForTrain': {'eligible': True}}}}
+                     'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
+                     'discountCards': [{'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
+                                        'dateOfBirth': Config.BIRTH_DATE}], 'promoCode': '', 'bicycle': None}],
+                     'checkBestPrices': False, 'salesMarket': 'fr-FR',
+                     'channel': 'web', 'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
+                     }
+            }
 
     response = s.post('https://www.oui.sncf/api/vsd/travels/outward/train/next', headers=headers, data=json_dumps(data))
     if response.status_code != 200:
         print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
         if response.status_code == 403:
-            print('Too many requests. Resolve captcha at https://www.oui.sncf/billet-train and try again in a few minutes.')
+            print(
+                'Too many requests. Resolve captcha at https://www.oui.sncf/billet-train and try again in a few minutes.')
         exit('Error in proposal request')
     return response
 
@@ -187,6 +182,7 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                             print('Second segments found :')
                             for proposal in second_segment:
                                 proposal.print()
+
                         for first_proposal in first_segment:
                             for second_proposal in second_segment:
                                 if second_proposal.departure_date > first_proposal.arrival_date:
@@ -194,34 +190,15 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                                     journey.display()
 
 
-def _help():
-    args = argv
-    print('Usage: python3', args[0], 'departure_station arrival_station days_delta')
 
 
 def main():
-    args = argv
-    try:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("stations", metavar="station", help="Station names", nargs=2)
-        parser.add_argument("-t", "--timedelta", help="Number of days to search", type=int, default=1)
-        parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
-        parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
-        args = parser.parse_args()
-
-    except ValueError:
-        _help()
-        exit(1)
-
-    dotenv_path = join(dirname(__file__), '.env')
-    load_dotenv(dotenv_path)
-
-    for env_value in ENV_VALUES.keys():
-        if environ.get(env_value) is None:
-            raise ValueError("Missing environment variable {}".format(env_value))
-        else:
-            ENV_VALUES[env_value] = environ.get(env_value)
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument("stations", metavar="station", help="Station names", nargs=2)
+    parser.add_argument("-t", "--timedelta", help="Number of days to search", type=int, default=1)
+    parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
+    parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
+    args = parser.parse_args()
 
     total_search(args.stations[0], args.stations[1], 1, args.timedelta, verbosity=args.verbosity, quiet=args.quiet)
 
@@ -229,6 +206,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except KeyboardInterrupt:
+
+    except KeyboardInterrupt:  # Catch CTRL-C
         print('Interrupted')
         exit(1)
