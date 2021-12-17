@@ -127,9 +127,9 @@ class Proposal:
         removed_count = 0
         for index, proposal in enumerate(all_proposals):
             if index != 0:
-                latest_proposal = all_proposals[index - 1]
+                latest_proposal = filtered_proposals[-1]
                 if proposal.departure_date != latest_proposal.departure_date and \
-                        proposal.duration != latest_proposal.duration:
+                        proposal.arrival_date != latest_proposal.arrival_date:
                     # Do not add duplicate proposals where departure_date and duration are the same
                     filtered_proposals.append(proposal)
                 else:
