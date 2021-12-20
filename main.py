@@ -61,7 +61,8 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
     return Proposal.remove_duplicates(all_proposals, verbosity) if all_proposals is not None else []
 
 
-def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, direct_only: bool, verbosity: bool, quiet: bool):
+def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, direct_only: bool,
+                 berth_only: bool, verbosity: bool, quiet: bool):
     date = datetime.now().replace(hour=0, minute=0) + timedelta(days=days_delta)
 
     departure_code, formal_departure_name = Station.name_to_code(Station(departure_name))
@@ -82,15 +83,11 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
 
         print('Direct journey from', formal_departure_name, 'to', formal_arrival_name)
         direct = get_available_seats(departure_code, arrival_code, day, verbosity, quiet)
-        if direct:
-            for proposal in direct:
-                proposal.print()
+        display_proposals(direct)
 
         if not direct_only:
-
-            intermediate_stations = departure_direct_destinations.get_common_stations(arrival_direct_destinations)  # + [PARIS]
-
-
+            intermediate_stations = departure_direct_destinations.get_common_stations(
+                arrival_direct_destinations)  # + [PARIS]
 
             for intermediate_station in intermediate_stations:
                 # check for segments between station located in France only
@@ -108,8 +105,7 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                     if first_segment:  # we try to find second segment only if first segment is not empty
                         if verbosity:
                             print('First segments found :')
-                            for proposal in first_segment:
-                                proposal.print()
+                            display_proposals(first_segment)
                         second_segment = get_available_seats(intermediate_station['station'].name_to_code()[0],
                                                              arrival_code,
                                                              day, verbosity=verbosity, quiet=quiet)
@@ -117,14 +113,22 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                         if second_segment:
                             if verbosity:
                                 print('Second segments found :')
-                                for proposal in second_segment:
-                                    proposal.print()
+                                display_proposals(second_segment)
 
                             for first_proposal in first_segment:
                                 for second_proposal in second_segment:
                                     if second_proposal.departure_date > first_proposal.arrival_date:
-                                        journey = MultipleProposals(first_proposal, second_proposal)
-                                        journey.display()
+                                        MultipleProposals(first_proposal, second_proposal).display(berth_only=berth_only)
+
+
+def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False):
+    if proposals:
+        for proposal in proposals:
+            if berth_only and proposal.transporter == 'INTERCITES DE NUIT':
+                if 'berths' in proposal.remaining_seats:
+                    proposal.print()
+            else:
+                proposal.print()
 
 
 def main():
@@ -133,11 +137,20 @@ def main():
     parser.add_argument("-t", "--timedelta", help="How many days from today", type=int, default=1)
     parser.add_argument("-p", "--period", help="Number of days to search", type=int, default=1)
     parser.add_argument("-d", "--direct-only", help="Print direct proposals only", action="store_true")
+    parser.add_argument("-b", "--berth-only", help="Print berth only for Intercites de Nuit proposals",
+                        action="store_true")
     parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
     args = parser.parse_args()
 
-    total_search(args.stations[0], args.stations[1], args.period, args.timedelta, direct_only=args.direct_only, verbosity=args.verbosity, quiet=args.quiet)
+    total_search(args.stations[0],
+                 args.stations[1],
+                 args.period,
+                 args.timedelta,
+                 direct_only=args.direct_only,
+                 berth_only=args.berth_only,
+                 verbosity=args.verbosity, quiet=args.quiet
+                 )
 
 
 if __name__ == '__main__':

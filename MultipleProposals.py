@@ -8,9 +8,15 @@ class MultipleProposals:
     def __init__(self, *proposals: 'Proposal'):
         self.proposals = proposals
 
-    def display(self) -> None:
+    def display(self, berth_only: bool = False) -> None:
         first = self.proposals[0]
         second = self.proposals[1]
+
+        if berth_only:
+            if first.transporter == 'INTERCITES DE NUIT' and 'berths' not in first.remaining_seats:
+                return None
+            if second.transporter == 'INTERCITES DE NUIT' and 'berths' not in second.remaining_seats:
+                return None
 
         print(
             f'{BColors.OKGREEN}'
