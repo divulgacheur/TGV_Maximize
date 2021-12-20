@@ -1,9 +1,11 @@
 from datetime import datetime
+from json import dumps as json_dumps
 
 import requests
 
 from BColors import BColors
 from Station import Station
+from config import Config
 
 
 class Proposal:
@@ -40,6 +42,52 @@ class Proposal:
                 elif placement_modes[2]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # SEAT_SECOND
                     remaining_seats['seats'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
         return remaining_seats
+
+    @staticmethod
+    def get_next(departure_station, arrival_station, departure_date, verbosity, quiet):
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Referer': 'https://www.oui.sncf/proposition/outward/train?wishId=95edb29e-9529-4e54-9645-01d0040da16d',
+            'content-type': 'application/json',
+            'x-client-app-id': 'VSD',
+            'x-client-channel': 'web',
+            'x-market-locale': 'fr_FR',
+            'x-vsd-locale': 'fr_FR',
+            'X-INSTANA-L': '1,correlationType=web;correlationId=afc550728eb5e772',
+            'Origin': 'https://www.oui.sncf',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'TE': 'trailers',
+            'Cookie': Config.OUISNCF_COOKIE
+        }
+        data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': departure_date}}},
+                'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
+                         'mainJourney': {'origin': {'codes': {'RESARAIL': {'code': departure_station}}},
+                                         'destination': {'codes': {'RESARAIL': {'code': arrival_station}}}, 'via': None},
+                         'directTravel': True,
+                         'schedule': {'outward': departure_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
+                                      'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND', 'passengers': [
+                        {'id': '0', 'typology': 'YOUNG', 'customerId': '', 'firstname': '', 'lastname': '',
+                         'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
+                         'discountCards': [{'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
+                                            'dateOfBirth': Config.BIRTH_DATE}], 'promoCode': '', 'bicycle': None}],
+                         'checkBestPrices': False, 'salesMarket': 'fr-FR',
+                         'channel': 'web', 'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
+                         }
+                }
+
+        response = requests.post('https://www.oui.sncf/api/vsd/travels/outward/train/next', headers=headers, data=json_dumps(data))
+        if response.status_code != 200:
+            print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
+            if response.status_code == 403:
+                print(
+                    'Too many requests. Resolve captcha at https://www.oui.sncf/billet-train and try again in a few minutes.')
+            exit('Error in proposal request')
+        return response
 
     @staticmethod
     def parse_proposal(proposal: any):

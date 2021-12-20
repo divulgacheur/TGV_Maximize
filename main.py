@@ -1,21 +1,17 @@
 #!/usr/bin/python3
 import argparse
 from datetime import datetime, timedelta
-from json import dumps as json_dumps
 from locale import setlocale, LC_TIME
-from operator import itemgetter
 from time import sleep
 
 from pyhafas import HafasClient
 from pyhafas.profile import DBProfile
 from requests import get, session
 
-from BColors import BColors
 from DirectDestination import DirectDestination
 from MultipleProposals import MultipleProposals
 from Proposal import Proposal
 from Station import Station
-from config import Config
 
 direct_journey_max_duration = 0
 setlocale(LC_TIME, "fr_FR.UTF-8")
@@ -25,54 +21,7 @@ s = session()
 s.get("https://www.oui.sncf/")
 
 
-def get_next_proposals(departure_station, arrival_station, departure_date, verbosity, quiet):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0',
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Referer': 'https://www.oui.sncf/proposition/outward/train?wishId=95edb29e-9529-4e54-9645-01d0040da16d',
-        'content-type': 'application/json',
-        'x-client-app-id': 'VSD',
-        'x-client-channel': 'web',
-        'x-market-locale': 'fr_FR',
-        'x-vsd-locale': 'fr_FR',
-        'X-INSTANA-L': '1,correlationType=web;correlationId=afc550728eb5e772',
-        'Origin': 'https://www.oui.sncf',
-        'Connection': 'keep-alive',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-origin',
-        'TE': 'trailers',
-        'Cookie': Config.OUISNCF_COOKIE
-    }
-    data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': departure_date}}},
-            'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
-                     'mainJourney': {'origin': {'codes': {'RESARAIL': {'code': departure_station}}},
-                                     'destination': {'codes': {'RESARAIL': {'code': arrival_station}}}, 'via': None},
-                     'directTravel': True,
-                     'schedule': {'outward': departure_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
-                                  'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND', 'passengers': [
-                    {'id': '0', 'typology': 'YOUNG', 'customerId': '', 'firstname': '', 'lastname': '',
-                     'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
-                     'discountCards': [{'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
-                                        'dateOfBirth': Config.BIRTH_DATE}], 'promoCode': '', 'bicycle': None}],
-                     'checkBestPrices': False, 'salesMarket': 'fr-FR',
-                     'channel': 'web', 'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
-                     }
-            }
-
-    response = s.post('https://www.oui.sncf/api/vsd/travels/outward/train/next', headers=headers, data=json_dumps(data))
-    if response.status_code != 200:
-        print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
-        if response.status_code == 403:
-            print(
-                'Too many requests. Resolve captcha at https://www.oui.sncf/billet-train and try again in a few minutes.')
-        exit('Error in proposal request')
-    return response
-
-
-def get_available_seats_next_x_days(departure_station: str, arrival_station: str, day: datetime, verbosity, quiet) -> [
-    Proposal]:
+def get_available_seats(departure_station: str, arrival_station: str, day: datetime, verbosity, quiet) -> [Proposal]:
     """
     Returns stations that are searched with the provided term
 
@@ -90,8 +39,8 @@ def get_available_seats_next_x_days(departure_station: str, arrival_station: str
     page_count = 0
     all_proposals = []
 
-    response = get_next_proposals(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'), verbosity,
-                                  quiet)
+    response = Proposal.get_next(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'), verbosity,
+                                 quiet)
 
     response_json = response.json()
     sleep(1)
@@ -101,8 +50,8 @@ def get_available_seats_next_x_days(departure_station: str, arrival_station: str
 
         while response_json['nextPagination'] and response_json['nextPagination']['type'] != 'NEXT_DAY':
             print('Next page', page_count) if verbosity else None
-            response = get_next_proposals(departure_station, arrival_station, Proposal.get_last_timetable(response),
-                                          verbosity, quiet)
+            response = Proposal.get_next(departure_station, arrival_station, Proposal.get_last_timetable(response),
+                                         verbosity, quiet)
             response_json = response.json()
             page_count += 1
             sleep(1)
@@ -112,22 +61,7 @@ def get_available_seats_next_x_days(departure_station: str, arrival_station: str
     return Proposal.remove_duplicates(all_proposals, verbosity) if all_proposals is not None else []
 
 
-def get_common_stations(departure_direct_destinations: DirectDestination,
-                        arrival_direct_destinations: DirectDestination) -> [Station]:
-    print("Let's try to split the journey from", departure_direct_destinations.station.name, 'to',
-          arrival_direct_destinations.station.name, end=' : ')
-
-    destinations_keys = set(departure_direct_destinations.destinations.keys()).intersection(
-        arrival_direct_destinations.destinations.keys())
-    destinations = list(itemgetter(*destinations_keys)(
-        departure_direct_destinations.destinations | arrival_direct_destinations.destinations))
-
-    print(len(destinations), 'intermediate stations available')
-
-    return destinations
-
-
-def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, verbosity: bool, quiet: bool):
+def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, direct_only: bool, verbosity: bool, quiet: bool):
     date = datetime.now().replace(hour=0, minute=0) + timedelta(days=days_delta)
 
     departure_code, formal_departure_name = Station.name_to_code(Station(departure_name))
@@ -147,60 +81,63 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
         print(day.strftime("%c"))
 
         print('Direct journey from', formal_departure_name, 'to', formal_arrival_name)
-        direct = get_available_seats_next_x_days(departure_code, arrival_code, day, verbosity, quiet)
+        direct = get_available_seats(departure_code, arrival_code, day, verbosity, quiet)
         if direct:
             for proposal in direct:
                 proposal.print()
 
-        intermediate_stations = get_common_stations(departure_direct_destinations,
-                                                    arrival_direct_destinations)  # + [PARIS]
+        if not direct_only:
 
-        for intermediate_station in intermediate_stations:
-            if intermediate_station[
-                'station'].is_in_france():  # check for segments between station located in France only
-                # farther_station = Station.get_farther_station(departure_direct_destinations, arrival_direct_destinations, intermediate_station)
+            intermediate_stations = departure_direct_destinations.get_common_stations(arrival_direct_destinations)  # + [PARIS]
 
-                # To optimize the search, we first search for the longest segment (most demanded than the shortest and
-                # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
-                # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
-                # segment is rare
-                print('Via', intermediate_station['station'].name) if not quiet else None
-                first_segment = get_available_seats_next_x_days(departure_code,
-                                                                intermediate_station['station'].name_to_code()[0],
-                                                                day, verbosity=verbosity, quiet=quiet)
-                if first_segment:  # we try to find second segment only if first segment is not empty
-                    if verbosity:
-                        print('First segments found :')
-                        for proposal in first_segment:
-                            proposal.print()
-                    second_segment = get_available_seats_next_x_days(intermediate_station['station'].name_to_code()[0],
-                                                                     arrival_code,
-                                                                     day, verbosity=verbosity, quiet=quiet)
 
-                    if second_segment:
+
+            for intermediate_station in intermediate_stations:
+                # check for segments between station located in France only
+                if intermediate_station['station'].is_in_france():
+                    # farther_station = Station.get_farther_station(departure_direct_destinations, arrival_direct_destinations, intermediate_station)
+
+                    # To optimize the search, we first search for the longest segment (most demanded than the shortest and
+                    # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
+                    # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
+                    # segment is rare
+                    print('Via', intermediate_station['station'].name) if not quiet else None
+                    first_segment = get_available_seats(departure_code,
+                                                        intermediate_station['station'].name_to_code()[0],
+                                                        day, verbosity=verbosity, quiet=quiet)
+                    if first_segment:  # we try to find second segment only if first segment is not empty
                         if verbosity:
-                            print('Second segments found :')
-                            for proposal in second_segment:
+                            print('First segments found :')
+                            for proposal in first_segment:
                                 proposal.print()
+                        second_segment = get_available_seats(intermediate_station['station'].name_to_code()[0],
+                                                             arrival_code,
+                                                             day, verbosity=verbosity, quiet=quiet)
 
-                        for first_proposal in first_segment:
-                            for second_proposal in second_segment:
-                                if second_proposal.departure_date > first_proposal.arrival_date:
-                                    journey = MultipleProposals(first_proposal, second_proposal)
-                                    journey.display()
+                        if second_segment:
+                            if verbosity:
+                                print('Second segments found :')
+                                for proposal in second_segment:
+                                    proposal.print()
 
-
+                            for first_proposal in first_segment:
+                                for second_proposal in second_segment:
+                                    if second_proposal.departure_date > first_proposal.arrival_date:
+                                        journey = MultipleProposals(first_proposal, second_proposal)
+                                        journey.display()
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("stations", metavar="station", help="Station names", nargs=2)
-    parser.add_argument("-t", "--timedelta", help="Number of days to search", type=int, default=1)
+    parser.add_argument("-t", "--timedelta", help="How many days from today", type=int, default=1)
+    parser.add_argument("-p", "--period", help="Number of days to search", type=int, default=1)
+    parser.add_argument("-d", "--direct-only", help="Print direct proposals only", action="store_true")
     parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
     args = parser.parse_args()
 
-    total_search(args.stations[0], args.stations[1], 1, args.timedelta, verbosity=args.verbosity, quiet=args.quiet)
+    total_search(args.stations[0], args.stations[1], args.period, args.timedelta, direct_only=args.direct_only, verbosity=args.verbosity, quiet=args.quiet)
 
 
 if __name__ == '__main__':
