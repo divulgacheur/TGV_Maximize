@@ -8,7 +8,7 @@ class MultipleProposals:
     def __init__(self, *proposals: 'Proposal'):
         self.proposals = proposals
 
-    def display(self, berth_only: bool = False) -> None:
+    def print(self, berth_only: bool = False) -> None:
         first = self.proposals[0]
         second = self.proposals[1]
 
@@ -24,7 +24,7 @@ class MultipleProposals:
             f'({first.departure_date.strftime("%H:%M")}) → '
             f'{first.arrival_station.name} ({first.arrival_date.strftime("%H:%M")}) ', end='')
 
-        # If connections stations are different, i.e. Nimes <-> Nimes Pont du Gard
+        # If connection stations are different, i.e. Nimes <-> Nimes Pont du Gard
         if second.departure_station.code != first.arrival_station.code:
             print(f' ⭾ {second.departure_station.name} ({second.departure_date.strftime("%H:%M")}) ',
                   end='')  # Display the name of two connection stations
@@ -35,3 +35,11 @@ class MultipleProposals:
             f'| {second.display_seats() if second.get_remaining_seats() < first.get_remaining_seats() else first.display_seats()} '
             f'{BColors.ENDC}'
             )
+
+    @staticmethod
+    def display(first_segment, second_segment, berth_only: bool = False) -> None:
+        for first_proposal in first_segment:
+            for second_proposal in second_segment:
+                if second_proposal.departure_date > first_proposal.arrival_date:
+                    MultipleProposals(first_proposal, second_proposal).print(berth_only=berth_only)
+

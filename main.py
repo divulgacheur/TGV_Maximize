@@ -21,26 +21,19 @@ s = session()
 s.get("https://www.oui.sncf/")
 
 
-def get_available_seats(departure_station: str, arrival_station: str, day: datetime, verbosity, quiet) -> [Proposal]:
+def get_available_seats(departure_station: str, arrival_station: str, day: datetime, verbosity) -> [Proposal]:
     """
-    Returns stations that are searched with the provided term
-
-    The further forward the station is in the list, the higher the similarity to the search term.
-
-
+    Returns train proposals for a given day
     :param departure_station: station of departure
     :param arrival_station: station of arrival
     :param day: date of departure
-    :param quiet:
-    :param verbosity:
-
+    :param verbosity: enable verbosity
     :return: List of journey 'Proposal' objects
     """
     page_count = 0
     all_proposals = []
 
-    response = Proposal.get_next(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'), verbosity,
-                                 quiet)
+    response = Proposal.get_next(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'), verbosity)
 
     response_json = response.json()
     sleep(1)
@@ -51,7 +44,7 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
         while response_json['nextPagination'] and response_json['nextPagination']['type'] != 'NEXT_DAY':
             print('Next page', page_count) if verbosity else None
             response = Proposal.get_next(departure_station, arrival_station, Proposal.get_last_timetable(response),
-                                         verbosity, quiet)
+                                         verbosity)
             response_json = response.json()
             page_count += 1
             sleep(1)
@@ -82,8 +75,8 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
         print(day.strftime("%c"))
 
         print('Direct journey from', formal_departure_name, 'to', formal_arrival_name)
-        direct = get_available_seats(departure_code, arrival_code, day, verbosity, quiet)
-        display_proposals(direct)
+        direct = get_available_seats(departure_code, arrival_code, day, verbosity)
+        display_proposals(direct, berth_only=berth_only)
 
         if not direct_only:
             intermediate_stations = departure_direct_destinations.get_common_stations(
@@ -101,24 +94,21 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                     print('Via', intermediate_station['station'].name) if not quiet else None
                     first_segment = get_available_seats(departure_code,
                                                         intermediate_station['station'].name_to_code()[0],
-                                                        day, verbosity=verbosity, quiet=quiet)
+                                                        day, verbosity=verbosity)
                     if first_segment:  # we try to find second segment only if first segment is not empty
                         if verbosity:
                             print('First segments found :')
                             display_proposals(first_segment)
                         second_segment = get_available_seats(intermediate_station['station'].name_to_code()[0],
                                                              arrival_code,
-                                                             day, verbosity=verbosity, quiet=quiet)
+                                                             day, verbosity=verbosity)
 
                         if second_segment:
                             if verbosity:
                                 print('Second segments found :')
                                 display_proposals(second_segment)
 
-                            for first_proposal in first_segment:
-                                for second_proposal in second_segment:
-                                    if second_proposal.departure_date > first_proposal.arrival_date:
-                                        MultipleProposals(first_proposal, second_proposal).display(berth_only=berth_only)
+                            MultipleProposals.display(first_segment, second_segment, berth_only=berth_only)
 
 
 def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False):
