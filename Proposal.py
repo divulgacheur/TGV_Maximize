@@ -212,7 +212,7 @@ class Proposal:
                     removed_count += 1
             else:
                 filtered_proposals.append(proposal)
-        print(removed_count, 'duplicates removed') if verbosity else None
+        print('\t' + str(removed_count), 'duplicates removed') if verbosity else None
         return filtered_proposals
 
     def get_remaining_seats(self) -> int:

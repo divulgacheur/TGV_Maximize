@@ -8,6 +8,7 @@ from pyhafas import HafasClient
 from pyhafas.profile import DBProfile
 from requests import get, session
 
+from BColors import BColors
 from DirectDestination import DirectDestination
 from MultipleProposals import MultipleProposals
 from Proposal import Proposal
@@ -30,7 +31,7 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
     :param verbosity: enable verbosity
     :return: List of journey 'Proposal' objects
     """
-    page_count = 0
+    page_count = 1
     all_proposals = []
 
     response = Proposal.get_next(departure_station, arrival_station, day.strftime('%Y-%m-%dT%H:%M:00'), verbosity)
@@ -42,7 +43,7 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
         all_proposals = Proposal.filter_proposals(response_json['travelProposals'], direct_journey_max_duration)
 
         while response_json['nextPagination'] and response_json['nextPagination']['type'] != 'NEXT_DAY':
-            print('Next page', page_count) if verbosity else None
+            print('\t' + 'Next page -', page_count) if verbosity else None
             response = Proposal.get_next(departure_station, arrival_station, Proposal.get_last_timetable(response),
                                          verbosity)
             response_json = response.json()
@@ -51,7 +52,7 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
             if response_json is not None and 'travelProposals' in response_json:
                 all_proposals.extend(
                     Proposal.filter_proposals(response_json['travelProposals'], direct_journey_max_duration))
-    return Proposal.remove_duplicates(all_proposals, verbosity) if all_proposals is not None else []
+    return Proposal.remove_duplicates(all_proposals, verbosity) if all_proposals else []
 
 
 def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, direct_only: bool,
@@ -109,6 +110,10 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                                 display_proposals(second_segment)
 
                             MultipleProposals.display(first_segment, second_segment, berth_only=berth_only)
+                        else:
+                            print(BColors.FAIL + 'No second segments found' + BColors.ENDC) if verbosity else None
+                    else:
+                        print(BColors.FAIL + 'No first segments found' + BColors.ENDC) if verbosity else None
 
 
 def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False):
