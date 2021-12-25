@@ -220,4 +220,4 @@ class Proposal:
         Return remaining seats number for a proposal
         :return: number of seats
         """
-        return max(self.remaining_seats.keys())
+        return max(self.remaining_seats.values())
