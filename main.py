@@ -1,9 +1,12 @@
-#!/usr/bin/python3
-import argparse
+#!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
+
+from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from locale import setlocale, LC_TIME
 from time import sleep
 
+from argcomplete import autocomplete
 from pyhafas import HafasClient
 from pyhafas.profile import DBProfile
 from requests import get, session
@@ -132,7 +135,7 @@ def display_proposals(proposals: list[Proposal] or None, berth_only: bool = Fals
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = ArgumentParser()
     parser.add_argument("stations", metavar="station", help="Station names", nargs=2)
     parser.add_argument("-t", "--timedelta", help="How many days from today", type=int, default=1)
     parser.add_argument("-p", "--period", help="Number of days to search", type=int, default=1)
@@ -142,6 +145,7 @@ def main():
     parser.add_argument("--via", type=str, help="Force connection station with specified name")
     parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
+    autocomplete(parser)
     args = parser.parse_args()
 
     total_search(args.stations[0],
