@@ -56,7 +56,7 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
 
 
 def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, direct_only: bool,
-                 berth_only: bool, verbosity: bool, quiet: bool):
+                 berth_only: bool, via: str, verbosity: bool, quiet: bool):
     date = datetime.now().replace(hour=0, minute=0) + timedelta(days=days_delta)
 
     departure_code, formal_departure_name = Station.name_to_code(Station(departure_name))
@@ -80,8 +80,13 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
         display_proposals(direct, berth_only=berth_only)
 
         if not direct_only:
-            intermediate_stations = departure_direct_destinations.get_common_stations(
-                arrival_direct_destinations)  # + [PARIS]
+            if not via:
+                intermediate_stations = departure_direct_destinations.get_common_stations(
+                    arrival_direct_destinations)  # + [PARIS]
+            else:
+                via_code, formal_via_name = Station.name_to_code(Station(via))
+                intermediate_stations = [{'station': Station(via, code=via_code, formal_name=formal_via_name,
+                                                             identifier=client.locations(via)[0].__dict__['id'])}]
 
             for intermediate_station in intermediate_stations:
                 # check for segments between station located in France only
@@ -134,6 +139,7 @@ def main():
     parser.add_argument("-d", "--direct-only", help="Print direct proposals only", action="store_true")
     parser.add_argument("-b", "--berth-only", help="Print berth only for Intercites de Nuit proposals",
                         action="store_true")
+    parser.add_argument("--via", type=str, help="Force connection station with specified name")
     parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
     args = parser.parse_args()
@@ -144,6 +150,7 @@ def main():
                  args.timedelta,
                  direct_only=args.direct_only,
                  berth_only=args.berth_only,
+                 via=args.via,
                  verbosity=args.verbosity, quiet=args.quiet
                  )
 
