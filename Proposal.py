@@ -161,7 +161,7 @@ class Proposal:
             f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")}) '
             f'{self.transporter} '
             f'{self.vehicle_number}',
-            f'{self.display_seats()} '
+            f'| {self.display_seats()} '
             f'{BColors.ENDC}'
         )
 
