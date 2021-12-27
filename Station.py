@@ -82,9 +82,9 @@ class Station:
     def get_farther_station(cls, departure: 'DirectDestination', arrival: 'DirectDestination', intermediate_station: 'Station') -> 'Station':
         if departure.destinations[intermediate_station['station'].id]['duration'] > \
                 arrival.destinations[intermediate_station['station'].id]['duration']:
-            return intermediate_station['station']
-        else:
             return departure.station
+        else:
+            return intermediate_station['station']
 
 
 # Nimes (centre) = Nimes Pont du Gard

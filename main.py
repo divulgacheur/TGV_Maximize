@@ -94,34 +94,38 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
             for intermediate_station in intermediate_stations:
                 # check for segments between station located in France only
                 if intermediate_station['station'].is_in_france():
-                    # farther_station = Station.get_farther_station(departure_direct_destinations, arrival_direct_destinations, intermediate_station)
+                    print('Via', intermediate_station['station'].name) if not quiet else None
 
-                    # To optimize the search, we first search for the longest segment (most demanded than the shortest and
+                    farther_station = Station.get_farther_station(departure_direct_destinations,
+                                                                  arrival_direct_destinations, intermediate_station)
+                    if farther_station is intermediate_station:
+                        segments = {0: {'departure': departure, 'arrival': intermediate_station['station'],
+                                        1: {'departure': intermediate_station['station'], 'arrival': arrival}}}
+                    else:
+                        segments = {1: {'departure': intermediate_station['station'], 'arrival': arrival},
+                                    0: {'departure': departure, 'arrival': intermediate_station['station'], }}
+                    results = {}
+                    for index, segment in segments.items():
+                        result = get_available_seats(segment['departure'].name_to_code()[0],
+                                                     segment['arrival'].name_to_code()[0],
+                                                     day, verbosity=verbosity)
+                        if result:
+                            results[index] = result
+                            if verbosity:
+                                print('Segment', index + 1, 'found')
+                                display_proposals(result)
+                        else:
+                            print(BColors.FAIL + 'Segment', index + 1,
+                                  'not found' + BColors.ENDC) if verbosity else None
+                            break
+
+                        # To optimize the search, we first search for the longest segment (most demanded than the shortest and
                     # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
                     # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
                     # segment is rare
-                    print('Via', intermediate_station['station'].name) if not quiet else None
-                    first_segment = get_available_seats(departure_code,
-                                                        intermediate_station['station'].name_to_code()[0],
-                                                        day, verbosity=verbosity)
-                    if first_segment:  # we try to find second segment only if first segment is not empty
-                        if verbosity:
-                            print('First segments found :')
-                            display_proposals(first_segment)
-                        second_segment = get_available_seats(intermediate_station['station'].name_to_code()[0],
-                                                             arrival_code,
-                                                             day, verbosity=verbosity)
 
-                        if second_segment:
-                            if verbosity:
-                                print('Second segments found :')
-                                display_proposals(second_segment)
-
-                            MultipleProposals.display(first_segment, second_segment, berth_only=berth_only)
-                        else:
-                            print(BColors.FAIL + 'No second segments found' + BColors.ENDC) if verbosity else None
-                    else:
-                        print(BColors.FAIL + 'No first segments found' + BColors.ENDC) if verbosity else None
+                    if len(results) > 1:
+                        MultipleProposals.display(results[0], results[1], berth_only=berth_only)
 
 
 def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False):
