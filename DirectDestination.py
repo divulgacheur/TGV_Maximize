@@ -7,7 +7,8 @@ from Station import Station
 
 class DirectDestination:
     station: Station
-    destinations: dict[str, Station]
+    destination = {'station': Station, 'duration': int}
+    destinations: dict[str, destination]
 
     def __init__(self, station: Station, request: requests.Response):
         self.station = station
