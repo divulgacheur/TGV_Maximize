@@ -101,7 +101,7 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
 
                 farther_station = Station.get_farther_station(departure_direct_destinations,
                                                               arrival_direct_destinations, intermediate_station)
-                if farther_station is intermediate_station:
+                if farther_station == intermediate_station:
                     segments = {0: {'departure': departure, 'arrival': intermediate_station['station'],
                                     1: {'departure': intermediate_station['station'], 'arrival': arrival}}}
                 else:
