@@ -27,8 +27,6 @@ class DirectDestination:
 
     def get_common_stations(self: 'DirectDestination',
                             arrival_direct_destinations: 'DirectDestination') -> [Station]:
-        print("Let's try to split the journey from", self.station.name, 'to',
-              arrival_direct_destinations.station.name, end=' : ')
 
         destinations_keys = set(self.destinations.keys()).intersection(
             arrival_direct_destinations.destinations.keys())

@@ -24,6 +24,7 @@ class Station:
     def is_in_france(self):
         return self.id[:2] == '87'
 
+    # noinspection SpellCheckingInspection
     def name_to_code(self) -> (str, str) or None:
         if self.code is not None:
             return self.code, self.name
@@ -79,7 +80,8 @@ class Station:
         return response.json()[0]['rrCode']
 
     @classmethod
-    def get_farther_station(cls, departure: 'DirectDestination', arrival: 'DirectDestination', intermediate_station: 'Station') -> 'Station':
+    def get_farther_station(cls, departure: 'DirectDestination', arrival: 'DirectDestination',
+                            intermediate_station: 'dict') -> 'Station':
         if departure.destinations[intermediate_station['station'].id]['duration'] > \
                 arrival.destinations[intermediate_station['station'].id]['duration']:
             return departure.station

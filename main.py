@@ -79,53 +79,56 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
         print(day.strftime("%c"))
 
         print('Direct journey from', formal_departure_name, 'to', formal_arrival_name)
-        direct = get_available_seats(departure_code, arrival_code, day, verbosity)
-        display_proposals(direct, berth_only=berth_only)
+        direct_proposals = get_available_seats(departure_code, arrival_code, day, verbosity)
+        display_proposals(direct_proposals, berth_only=berth_only)
 
-        if not direct_only:
-            if not via:
-                intermediate_stations = departure_direct_destinations.get_common_stations(
-                    arrival_direct_destinations)  # + [PARIS]
-            else:
-                via_code, formal_via_name = Station.name_to_code(Station(via))
-                intermediate_stations = [{'station': Station(via, code=via_code, formal_name=formal_via_name,
-                                                             identifier=client.locations(via)[0].__dict__['id'])}]
+        if direct_only:
+            exit(0)
 
-            for intermediate_station in intermediate_stations:
-                # check for segments between station located in France only
-                if intermediate_station['station'].is_in_france():
-                    print('Via', intermediate_station['station'].name) if not quiet else None
+        print("Let's try to split the journey from", departure.name, 'to', arrival.name, end=' : ')
+        if not via:
+            intermediate_stations = departure_direct_destinations.get_common_stations(
+                arrival_direct_destinations)  # + [PARIS]
+        else:
+            via_code, formal_via_name = Station.name_to_code(Station(via))
+            intermediate_stations = [{'station': Station(via, code=via_code, formal_name=formal_via_name,
+                                                         identifier=client.locations(via)[0].__dict__['id'])}]
 
-                    farther_station = Station.get_farther_station(departure_direct_destinations,
-                                                                  arrival_direct_destinations, intermediate_station)
-                    if farther_station is intermediate_station:
-                        segments = {0: {'departure': departure, 'arrival': intermediate_station['station'],
-                                        1: {'departure': intermediate_station['station'], 'arrival': arrival}}}
+        for intermediate_station in intermediate_stations:
+
+            if intermediate_station['station'].is_in_france():  # check for segments between station located in France only
+                print('Via', intermediate_station['station'].name) if not quiet else None
+
+                farther_station = Station.get_farther_station(departure_direct_destinations,
+                                                              arrival_direct_destinations, intermediate_station)
+                if farther_station is intermediate_station:
+                    segments = {0: {'departure': departure, 'arrival': intermediate_station['station'],
+                                    1: {'departure': intermediate_station['station'], 'arrival': arrival}}}
+                else:
+                    segments = {1: {'departure': intermediate_station['station'], 'arrival': arrival},
+                                0: {'departure': departure, 'arrival': intermediate_station['station'], }}
+                results = {}
+                for index, segment in segments.items():
+                    result = get_available_seats(segment['departure'].name_to_code()[0],
+                                                 segment['arrival'].name_to_code()[0],
+                                                 day, verbosity=verbosity)
+                    if result:
+                        results[index] = result
+                        if verbosity:
+                            print('Segment', index + 1, 'found')
+                            display_proposals(result)
                     else:
-                        segments = {1: {'departure': intermediate_station['station'], 'arrival': arrival},
-                                    0: {'departure': departure, 'arrival': intermediate_station['station'], }}
-                    results = {}
-                    for index, segment in segments.items():
-                        result = get_available_seats(segment['departure'].name_to_code()[0],
-                                                     segment['arrival'].name_to_code()[0],
-                                                     day, verbosity=verbosity)
-                        if result:
-                            results[index] = result
-                            if verbosity:
-                                print('Segment', index + 1, 'found')
-                                display_proposals(result)
-                        else:
-                            print(BColors.FAIL + 'Segment', index + 1,
-                                  'not found' + BColors.ENDC) if verbosity else None
-                            break
+                        print(BColors.FAIL + 'Segment', index + 1,
+                              'not found' + BColors.ENDC) if verbosity else None
+                        break
 
-                        # To optimize the search, we first search for the longest segment (most demanded than the shortest and
-                    # potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for the
-                    # journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because longer
-                    # segment is rare
+                # To optimize the search, we first search for the longest segment (most demanded than the shortest
+                # and potentially limiting factor) Exemple : For Beziers-Paris (~4h) via Nimes, we first search for
+                # the journey from Nimes to Paris (~3h), then for the journey from Beziers-Nimes (~1h), because
+                # longer segment is rare
 
-                    if len(results) > 1:
-                        MultipleProposals.display(results[0], results[1], berth_only=berth_only)
+                if len(results) > 1:
+                    MultipleProposals.display(results[0], results[1], berth_only=berth_only)
 
 
 def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False):
