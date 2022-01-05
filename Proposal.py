@@ -149,7 +149,7 @@ class Proposal:
              for physical_space, count in self.remaining_seats.items()
              ]) + ' remaining'
 
-    def print(self) -> None:
+    def print(self, long: bool) -> None:
         """
         Print journey proposal, date, location, train information & price
         :proposal: Proposal
@@ -158,9 +158,8 @@ class Proposal:
         print(
             f'{BColors.OKGREEN}'
             f'{self.departure_station.name}' f' ({self.departure_date.strftime("%H:%M")}) → '
-            f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")}) '
-            f'{self.transporter} '
-            f'{self.vehicle_number}',
+            f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")})',
+            f'{self.transporter} {self.vehicle_number}' if long else None,
             f'| {self.display_seats()} '
             f'{BColors.ENDC}'
         )

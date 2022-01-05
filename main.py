@@ -59,7 +59,7 @@ def get_available_seats(departure_station: str, arrival_station: str, day: datet
 
 
 def total_search(departure_name: str, arrival_name: str, days: int, days_delta: int, direct_only: bool,
-                 berth_only: bool, via: str, verbosity: bool, quiet: bool):
+                 berth_only: bool, via: str, long: bool, verbosity: bool, quiet: bool):
     date = datetime.now().replace(hour=0, minute=0) + timedelta(days=days_delta)
 
     departure_code, formal_departure_name = Station.name_to_code(Station(departure_name))
@@ -80,7 +80,7 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
 
         print('Direct journey from', formal_departure_name, 'to', formal_arrival_name)
         direct_proposals = get_available_seats(departure_code, arrival_code, day, verbosity)
-        display_proposals(direct_proposals, berth_only=berth_only)
+        display_proposals(direct_proposals, berth_only=berth_only, long=long)
 
         if direct_only:
             exit(0)
@@ -128,17 +128,17 @@ def total_search(departure_name: str, arrival_name: str, days: int, days_delta: 
                 # longer segment is rare
 
                 if len(results) > 1:
-                    MultipleProposals.display(results[0], results[1], berth_only=berth_only)
+                    MultipleProposals.display(results[0], results[1], berth_only=berth_only, long=long)
 
 
-def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False):
+def display_proposals(proposals: list[Proposal] or None, berth_only: bool = False, long: bool = False):
     if proposals:
         for proposal in proposals:
             if berth_only and proposal.transporter == 'INTERCITES DE NUIT':
                 if 'berths' in proposal.remaining_seats:
-                    proposal.print()
+                    proposal.print(long=long)
             else:
-                proposal.print()
+                proposal.print(long=long)
 
 
 def main():
@@ -150,6 +150,7 @@ def main():
     parser.add_argument("-b", "--berth-only", help="Print berth only for Intercites de Nuit proposals",
                         action="store_true")
     parser.add_argument("--via", type=str, help="Force connection station with specified name")
+    parser.add_argument("-l", "--long", help="Add details for prompted proposals, including transporter and vehicle number", action="store_true")
     parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
     autocomplete(parser)
@@ -162,6 +163,7 @@ def main():
                  direct_only=args.direct_only,
                  berth_only=args.berth_only,
                  via=args.via,
+                 long=args.long,
                  verbosity=args.verbosity, quiet=args.quiet
                  )
 
