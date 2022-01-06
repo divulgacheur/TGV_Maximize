@@ -3,6 +3,12 @@
 ## Setup
 
 Create and fill a `.env` file with your cookies contents, your birthdate and your TGVMax card number.
+<details>
+  <summary>Tutorial to get your oui.sncf cookies. Reproduce it once connected. </summary>
+
+![](docs/get-ouisncf-cookies-tutorial.gif)
+
+</details>
 
 ## Run
 ```
