@@ -43,13 +43,25 @@ class Proposal:
             if offer['amount'] == 0:
                 placement_modes = offer['offerSegments'][0]['placement']['availablePlacementModes']
                 if placement_modes[1]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # BERTH_SECOND
+                    # if there is no linked offer, the berth offer is this one
                     remaining_seats['berths'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
+                    # if remainingSeats is not set, it means there is no limit
+                    # 999 is a magic number, it means that there are more than 10 berths available
                 elif placement_modes[2]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # SEAT_SECOND
+                    # if there is no linked offer, the seat offer is this one
                     remaining_seats['seats'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
         return remaining_seats
 
     @staticmethod
     def get_next(departure_station, arrival_station, departure_date, verbosity) -> requests.Response:
+        """
+        Get next proposal response from oui.sncf API
+        :param departure_station: departure station code (5 letters)
+        :param arrival_station: arrival station code (5 letters)
+        :param departure_date: departure date (YYYY-MM-DDTHH:MM:SS)
+        :param verbosity: enable verbosity
+        :return: JSON response of the request
+        """
         headers = {
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0',
             'Accept': '*/*',
@@ -135,7 +147,7 @@ class Proposal:
     def get_last_timetable(response: requests.Response) -> str:
         """
         Returns last departure timetable
-        :response term: Search term
+        :response: response of the request to get proposal
         :return: departure datetime for travelProposals passed in parameter
         """
         return response.json()['travelProposals'][-1]['departureDate']
@@ -151,16 +163,16 @@ class Proposal:
 
     def print(self, long: bool) -> None:
         """
-        Print journey proposal, date, location, train information & price
-        :proposal: Proposal
+        Prints the proposal object in a human-readable format
+        :param long: enable printing of detailed proposals, including the transporter and the vehicle number
         :return: None
         """
         print(
             f'{BColors.OKGREEN}'
             f'{self.departure_station.name}' f' ({self.departure_date.strftime("%H:%M")}) → '
             f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")})',
-            f'{self.transporter} {self.vehicle_number}' if long else None,
-            f'| {self.display_seats()} '
+            f'{self.transporter} {self.vehicle_number}' if long else '',
+            f'| {self.display_seats()} ',
             f'{BColors.ENDC}'
         )
 
@@ -216,7 +228,7 @@ class Proposal:
 
     def get_remaining_seats(self) -> int:
         """
-        Return remaining seats number for a proposal
+        Return maximum remaining seats number for all physical spaces available for a proposal
         :return: number of seats
         """
         return max(self.remaining_seats.values())
