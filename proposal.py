@@ -1,6 +1,6 @@
 from datetime import datetime
 from json import dumps as json_dumps
-
+from sys import exit as sys_exit
 import requests
 
 from BColors import BColors
@@ -9,6 +9,10 @@ from config import Config
 
 
 class Proposal:
+    """
+    Train travel Proposal class
+    """
+
     duration: int
     min_price: int
     departure_date: datetime
@@ -22,7 +26,7 @@ class Proposal:
     def __init__(self, duration, min_price, departure_date, departure_station, arrival_date, arrival_station,
                  transporter, vehicle_number, remaining_seats):
         self.duration = duration
-        self.minPrice = min_price
+        self.min_price = min_price
         self.departure_date = departure_date
         self.departure_station = departure_station
         self.arrival_date = arrival_date
@@ -108,7 +112,7 @@ class Proposal:
             if response.status_code == 403:
                 print(
                     'Too many requests. Resolve captcha at https://oui.sncf/billet-train and recover your new cookies')
-            exit('Error in the request to get proposal')
+            sys_exit('Error in the request to get proposal')
         return response
 
     @staticmethod
@@ -191,11 +195,11 @@ class Proposal:
             if proposal['secondClassOffers'] and proposal['secondClassOffers']['offers']:
                 proposal_obj = Proposal.parse_proposal(proposal)
 
-                if proposal_obj.minPrice == 0:
+                if proposal_obj.min_price == 0:
                     if proposal_obj.duration > direct_journey_max_duration:
                         direct_journey_max_duration = proposal_obj.duration
                     filtered_proposals.append(proposal_obj)
-                elif proposal_obj.minPrice == 99999:
+                elif proposal_obj.min_price == 99999:
                     if get_unavailable:
                         filtered_proposals.append(proposal_obj)
                 else:
@@ -223,7 +227,8 @@ class Proposal:
                     removed_count += 1
             else:
                 filtered_proposals.append(proposal)
-        print('\t' + str(removed_count), 'duplicates removed') if verbosity else None
+        if verbosity:
+            print(f'{removed_count} duplicates removed')
         return filtered_proposals
 
     def get_remaining_seats(self) -> int:
