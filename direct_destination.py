@@ -2,10 +2,14 @@ from operator import itemgetter
 
 import requests
 
-from Station import Station
+from station import Station
 
 
 class DirectDestination:
+    """
+    Class for finding the direct destinations of a given station.
+    """
+
     station: Station
     destination = {'station': Station, 'duration': int}
     destinations: dict[str, destination]
@@ -17,8 +21,8 @@ class DirectDestination:
                 'station':
                     Station(
                         name=station['name'],
-                        latitude=station['location']['latitude'],
-                        longitude=station['location']['longitude'],
+                        coordinates=(
+                            station['location']['latitude'], station['location']['longitude']),
                         identifier=station['id'],
                     ),
                 'duration':
@@ -27,6 +31,12 @@ class DirectDestination:
 
     def get_common_stations(self: 'DirectDestination',
                             arrival_direct_destinations: 'DirectDestination') -> [Station]:
+        """
+        Returns a list of stations that are common to both the departure and arrival stations.
+        :param self: The departure station's direct destinations.
+        :param arrival_direct_destinations: The arrival station's direct destinations.
+        :return: A list of stations
+        """
 
         destinations_keys = set(self.destinations.keys()).intersection(
             arrival_direct_destinations.destinations.keys())
