@@ -7,14 +7,20 @@ load_dotenv()
 
 
 class AppConfigError(Exception):
-    pass
+    """
+    Exception for config errors.
+    """
 
 
 def _parse_bool(val: Union[str, bool]) -> bool:  # pylint: disable=E1136
-    return val if type(val) == bool else val.lower()
+    return val if isinstance(val, bool) else val.lower()
 
 
 class AppConfig:
+    """
+    Application configuration.
+    """
+
     OUISNCF_COOKIE: str
     TGVMAX_CARD_NUMBER: str
     BIRTH_DATE: str
@@ -27,14 +33,14 @@ class AppConfig:
     """
 
     def __init__(self, env):
-        for field in self.__annotations__:
+        for field in AppConfig.__annotations__:
             if not field.isupper():
                 continue
 
             # Raise AppConfigError if required field not supplied
             default_value = getattr(self, field, None)
             if default_value is None and env.get(field) is None:
-                raise AppConfigError('The {} field is required in the .env file'.format(field))
+                raise AppConfigError(f'The {field} field is required in the .env file')
 
             # Cast env var value to expected type and raise AppConfigError on failure
 
@@ -47,12 +53,8 @@ class AppConfig:
 
                 self.__setattr__(field, value)
             except ValueError:
-                raise AppConfigError('Unable to cast value of "{}" to type "{}" for "{}" field'.format(
-                    env[field],
-                    var_type,
-                    field
-                )
-                )
+                raise AppConfigError(f'Unable to cast value of "{env[field]}" '
+                                     f'to type "{var_type}" for "{field}" field') from None
 
     def __repr__(self):
         return str(self.__dict__)
