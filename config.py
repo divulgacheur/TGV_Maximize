@@ -24,6 +24,7 @@ class AppConfig:
     OUISNCF_COOKIE: str
     TGVMAX_CARD_NUMBER: str
     BIRTH_DATE: str
+    OUISNCF_STATS_COOKIE: str
 
     """
     Map environment variables to class fields according to these rules:
