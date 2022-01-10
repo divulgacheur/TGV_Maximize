@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
-from BColors import BColors
+
+from bcolors import BColors
+from options import SearchOptions
 
 if TYPE_CHECKING:
     from proposal import Proposal
@@ -13,20 +15,21 @@ class MultipleProposals:
     def __init__(self, *proposals: 'Proposal'):
         self.proposals = proposals
 
-    def print(self, berth_only: bool = False, long: bool = False) -> None:
+    def print(self, opts: SearchOptions) -> None:
         """
         Prints the MultipleProposals object in a human-readable format
-        :param berth_only: enable printing only the Intercites de Nuit proposals with a berth
-        :param long: enable printing of detailed proposals, including the transporter and the vehicle number
+        :param opts:
         :return: None
         """
 
         first = self.proposals[0]
         second = self.proposals[1]
 
-        if berth_only:
-            if (first.transporter == 'INTERCITES DE NUIT' and 'berths' not in first.remaining_seats) or \
-                    (second.transporter == 'INTERCITES DE NUIT' and 'berths' not in second.remaining_seats):
+        if opts.berth_only:
+            # For the berth only option, we don't print the Intercites de Nuit proposals
+            # without a berth
+            if (first.transporter == 'INTERCITES DE NUIT' and 'berths' not in first.remaining_seats)\
+                    or (second.transporter == 'INTERCITES DE NUIT' and 'berths' not in second.remaining_seats):
                 return
 
         print(
@@ -34,14 +37,15 @@ class MultipleProposals:
             f'{first.departure_station.name} '
             f'({first.departure_date.strftime("%H:%M")}) → '
             f'{first.arrival_station.name} ({first.arrival_date.strftime("%H:%M")})',
-            f'{first.transporter} {first.vehicle_number}' if long else '',
+            f'{first.transporter} {first.vehicle_number}' if opts.long else '',
             f'⭾ {second.departure_station.name} ({second.departure_date.strftime("%H:%M")})'
             if second.departure_station.code != first.arrival_station.code
             else f'⏲  ({second.departure_date.strftime("%H:%M")})',
-            # If connection stations are different, i.e. Nimes <-> Nimes Pont du Gard, display the name of two connection stations
+            # If connection stations are different, i.e. Nimes <-> Nimes Pont du Gard,
+            # display the name of two connection stations
             # Else, display only the station name once
             f'→ {second.arrival_station.name} ({second.arrival_date.strftime("%H:%M")})',
-            f'{second.transporter} {second.vehicle_number}' if long else '',
+            f'{second.transporter} {second.vehicle_number}' if opts.long else '',
             f'| {second.display_seats() if second.get_remaining_seats() < first.get_remaining_seats() else first.display_seats()} ',
             f'{BColors.ENDC}',
         )
@@ -52,10 +56,13 @@ class MultipleProposals:
         :param segment1: list of proposals for the first segment
         :param segment2: list of proposals for the second segment
         :param berth_only: enable printing only the Intercites de Nuit proposals with a berth
-        :param long: enable printing of detailed proposals, including the transporter and the vehicle number
+        :param long: enable printing of detailed proposals, with transporter and vehicle number
         :return:
         """
-        for first_proposal in segment1:
-            for second_proposal in segment2:
-                if second_proposal.departure_date > first_proposal.arrival_date:
-                    MultipleProposals(first_proposal, second_proposal).print(berth_only=berth_only, long=long)
+        for proposal_1 in segment1:
+            for proposal_2 in segment2:
+                if proposal_2.departure_date > proposal_1.arrival_date:
+                    MultipleProposals(proposal_1, proposal_2).print(
+                        SearchOptions(berth_only=berth_only,
+                                      long=long)
+                    )
