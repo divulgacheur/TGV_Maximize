@@ -3,8 +3,8 @@ from json import dumps as json_dumps
 from sys import exit as sys_exit
 import requests
 
-from BColors import BColors
-from Station import Station
+from bcolors import BColors
+from station import Station
 from config import Config
 
 
@@ -23,8 +23,8 @@ class Proposal:
     vehicle_number: str
     remaining_seats: dict
 
-    def __init__(self, duration, min_price, departure_date, departure_station, arrival_date, arrival_station,
-                 transporter, vehicle_number, remaining_seats):
+    def __init__(self, duration, min_price, departure_date, departure_station, arrival_date,
+                 arrival_station, transporter, vehicle_number, remaining_seats):
         self.duration = duration
         self.min_price = min_price
         self.departure_date = departure_date
@@ -36,7 +36,7 @@ class Proposal:
         self.remaining_seats = remaining_seats
 
     @staticmethod
-    def parse_intercites_de_nuit_offers(second_class_offers: any) -> dict:
+    def parse_intercites_de_nuit(second_class_offers: any) -> dict:
         """
         Parse Intercités de nuit offers to get exact number of seats and berths
         :param second_class_offers: JSON object of the offers
@@ -57,12 +57,12 @@ class Proposal:
         return remaining_seats
 
     @staticmethod
-    def get_next(departure_station, arrival_station, departure_date, verbosity) -> requests.Response:
+    def get_next(dpt_station, arr_station, dpt_date, verbosity) -> requests.Response:
         """
         Get next proposal response from oui.sncf API
-        :param departure_station: departure station code (5 letters)
-        :param arrival_station: arrival station code (5 letters)
-        :param departure_date: departure date (YYYY-MM-DDTHH:MM:SS)
+        :param dpt_station: departure station code (5 letters)
+        :param arr_station: arrival station code (5 letters)
+        :param dpt_date: departure date (YYYY-MM-DDTHH:MM:SS)
         :param verbosity: enable verbosity
         :return: JSON response of the request
         """
@@ -85,33 +85,34 @@ class Proposal:
             'TE': 'trailers',
             'Cookie': Config.OUISNCF_COOKIE
         }
-        data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': departure_date}}},
+        data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': dpt_date}}},
                 'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
-                         'mainJourney': {'origin': {'codes': {'RESARAIL': {'code': departure_station}}},
-                                         'destination': {'codes': {'RESARAIL': {'code': arrival_station}}},
+                         'mainJourney': {'origin': {'codes': {'RESARAIL': {'code': dpt_station}}},
+                                         'destination': {'codes': {'RESARAIL': {'code': arr_station}}},
                                          'via': None},
                          'directTravel': True,
-                         'schedule': {'outward': departure_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
+                         'schedule': {'outward': dpt_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
                                       'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND',
                          'passengers': [{'id': '0', 'typology': 'YOUNG', 'firstname': '', 'lastname': '',
                                          'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
                                          'discountCards': [{'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
                                                             'dateOfBirth': Config.BIRTH_DATE}],
                                          'bicycle': None}],
-                         'checkBestPrices': False, 'salesMarket': 'fr-FR',
-                         'channel': 'web', 'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
+                         'checkBestPrices': False, 'salesMarket': 'fr-FR', 'channel': 'web',
+                         'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
                          }
                 }
 
-        response = requests.post('https://www.oui.sncf/api/vsd/travels/outward/train/next', headers=headers,
-                                 data=json_dumps(data))
+        response = requests.post('https://www.oui.sncf/api/vsd/travels/outward/train/next',
+                                 headers=headers, data=json_dumps(data))
+
         if response.status_code != 200:
             print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
             if verbosity:
                 print(response.text)
             if response.status_code == 403:
-                print(
-                    'Too many requests. Resolve captcha at https://oui.sncf/billet-train and recover your new cookies')
+                print('Too many requests. Resolve captcha at '
+                      'https://oui.sncf/billet-train and recover your new cookies')
             sys_exit('Error in the request to get proposal')
         return response
 
@@ -125,27 +126,22 @@ class Proposal:
         duration = proposal['duration'] / 60
         min_price = proposal['minPrice']
         departure_date = datetime.strptime(proposal['departureDate'], '%Y-%m-%dT%H:%M:00')
-        departure_station = Station(str.lower(proposal['origin']['station']['label']),
-                                    proposal['origin']['latitude'],
-                                    proposal['origin']['longitude'],
-                                    code=proposal['origin']['station']['metaData']['PAO']['code'],
-                                    )
+        departure_station = Station.parse(proposal['origin'])
         arrival_date = datetime.strptime(proposal['arrivalDate'], '%Y-%m-%dT%H:%M:00')
-        arrival_station = Station(str.lower(proposal['destination']['station']['label']),
-                                  proposal['destination']['latitude'],
-                                  proposal['destination']['longitude'],
-                                  code=proposal['destination']['station']['metaData']['PAO']['code'],
-                                  )
-        transporter = proposal['secondClassOffers']['offers'][0]['offerSegments'][0]['transporter']
-        vehicle_number = proposal['secondClassOffers']['offers'][0]['offerSegments'][0]['vehicleNumber']
-        if transporter == 'INTERCITES DE NUIT':  # Intercites de nuit offers are parsed differently than other offers
-            remaining_seats = Proposal.parse_intercites_de_nuit_offers(proposal['secondClassOffers'])
+        arrival_station = Station.parse(proposal['destination'])
+        second_class_offer = proposal['secondClassOffers']['offers'][0]
+        transporter = second_class_offer['offerSegments'][0]['transporter']
+        vehicle_number = second_class_offer['offerSegments'][0]['vehicleNumber']
+        if transporter == 'INTERCITES DE NUIT':
+            # Because Intercites de nuit offers has berths there are parsed differently
+            remaining_seats = Proposal.parse_intercites_de_nuit(proposal['secondClassOffers'])
         else:
-            seats = proposal['secondClassOffers']['offers'][0]['remainingSeats']
+            seats = second_class_offer['remainingSeats']
             remaining_seats = {'seats': seats if seats is not None else 999}
+            # 999 is a magic number to indicate that there are more than 10 seats
 
-        return Proposal(duration, min_price, departure_date, departure_station, arrival_date, arrival_station,
-                        transporter, vehicle_number, remaining_seats)
+        return Proposal(duration, min_price, departure_date, departure_station, arrival_date,
+                        arrival_station, transporter, vehicle_number, remaining_seats)
 
     @staticmethod
     def get_last_timetable(response: requests.Response) -> str:
@@ -158,17 +154,36 @@ class Proposal:
 
     def display_seats(self) -> str:
         """
-        Returns remaining seats as a string for all physical spaces available, which can be seats or berths
+        Returns remaining seats as a string for all physical spaces available,
+         which can be seats or berths
         """
         return " and ".join(
             [(str(count) if count < 999 else 'more than 10') + ' ' + physical_space
              for physical_space, count in self.remaining_seats.items()
              ]) + ' remaining'
 
+    @staticmethod
+    def display(proposals: ['Proposal'] or None, berth_only: bool = False, long: bool = False):
+        """
+        Display the proposals in a table
+        :param proposals:
+        :param berth_only:
+        :param long:
+        :return:
+        """
+
+        if proposals:
+            for proposal in proposals:
+                if berth_only and proposal.transporter == 'INTERCITES DE NUIT':
+                    if 'berths' in proposal.remaining_seats:
+                        proposal.print(long=long)
+                else:
+                    proposal.print(long=long)
+
     def print(self, long: bool) -> None:
         """
         Prints the proposal object in a human-readable format
-        :param long: enable printing of detailed proposals, including the transporter and the vehicle number
+        :param long: enable printing of detailed proposals, including transporter and vehicle number
         :return: None
         """
         print(
@@ -181,15 +196,15 @@ class Proposal:
         )
 
     @staticmethod
-    def filter_proposals(proposals: list[any], direct_journey_max_duration: int, get_unavailable: bool = False,
-                         get_non_tgvmax: bool = False) -> list['Proposal']:
+    def filter(proposals: [any], direct_journey_max_duration: int, get_unavailable: bool = False,
+               get_non_tgvmax: bool = False) -> ['Proposal']:
         """
         Filter proposals by duration and price
         :proposals: JSON array of proposals
         :return: list of Proposal objects
         """
 
-        filtered_proposals: list[Proposal] = []
+        filtered_proposals: [Proposal] = []
 
         for proposal in proposals:
             if proposal['secondClassOffers'] and proposal['secondClassOffers']['offers']:
@@ -208,7 +223,7 @@ class Proposal:
         return filtered_proposals
 
     @staticmethod
-    def remove_duplicates(all_proposals: list['Proposal'], verbosity: bool = False) -> list['Proposal']:
+    def remove_duplicates(all_proposals: ['Proposal'], verbosity: bool = False) -> ['Proposal']:
         """
         Remove proposals with same departure and arrival time in duplicate
         :all_proposals: list of Proposal objects
