@@ -1,6 +1,5 @@
 from operator import itemgetter
-
-import requests
+from requests import get, Response as ReqResponse
 
 from station import Station
 
@@ -14,9 +13,16 @@ class DirectDestination:
     destination = {'station': Station, 'duration': int}
     destinations: dict[str, destination]
 
-    def __init__(self, station: Station, request: requests.Response):
+    def __init__(self, station: Station, destinations: dict[str, destination]):
         self.station = station
-        self.destinations = {
+        self.destinations = destinations
+
+    @staticmethod
+    def parse(station: Station, request: ReqResponse):
+        """
+        Parses the direct destinations of a given station and JSON response of the API.
+        """
+        destinations = {
             station['id']: {
                 'station':
                     Station(
@@ -28,6 +34,7 @@ class DirectDestination:
                 'duration':
                     station['duration']}
             for station in request.json()}
+        return DirectDestination(station, destinations)
 
     def get_common_stations(self: 'DirectDestination',
                             arrival_direct_destinations: 'DirectDestination') -> [Station]:
@@ -46,3 +53,12 @@ class DirectDestination:
         print(len(destinations), 'intermediate stations available')
 
         return destinations
+
+    @staticmethod
+    def get(departure):
+        """
+        Returns the direct destinations of a given station.
+        """
+        return DirectDestination.parse(
+            departure,
+            get('https://api.direkt.bahn.guru/' + departure.identifier))
