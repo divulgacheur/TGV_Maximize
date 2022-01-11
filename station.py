@@ -1,7 +1,11 @@
 from typing import TYPE_CHECKING
+from unidecode import unidecode
 
 import requests
-from unidecode import unidecode
+from pyhafas import HafasClient
+from pyhafas.profile import DBProfile
+
+client = HafasClient(DBProfile())
 
 if TYPE_CHECKING:
     from direct_destination import DirectDestination
@@ -18,6 +22,9 @@ class Station:
     code: str
 
     def __init__(self, name, formal_name=None, coordinates=None, identifier=None, code=None):
+        """
+        Initialize a station
+        """
         self.name = name
         self.formal_name = formal_name
         self.coordinates = coordinates
@@ -99,8 +106,8 @@ class Station:
         return None
 
     @classmethod
-    def get_farther_station(cls, departure: 'DirectDestination', arrival: 'DirectDestination',
-                            intermediate_station: 'dict') -> 'Station':
+    def get_farther(cls, departure: 'DirectDestination', arrival: 'DirectDestination',
+                    intermediate_station: 'dict') -> 'Station':
         """
         Get the station that is the farthest from the departure station
         :param departure:
@@ -108,7 +115,7 @@ class Station:
         :param intermediate_station:
         :return:
         """
-        if intermediate_station['station'] in departure.destinations and\
+        if intermediate_station['station'] in departure.destinations and \
                 departure.destinations[intermediate_station['station'].identifier]['duration'] > \
                 arrival.destinations[intermediate_station['station'].identifier]['duration']:
             return departure.station
@@ -127,9 +134,24 @@ class Station:
                        code=proposal['station']['metaData']['PAO']['code'],
                        )
 
+    def get_code(self):
+        """
+        Get the station code
+        :return:
+        """
+        code, formal_name = Station.get_station_code(self.name)
+        self.code = code
+        self.formal_name = formal_name
 
-# Nimes (centre) = Nimes Pont du Gard
+    def get_identifier(self):
+        """
+        Get the SNCF identifier of the station
+        """
+        self.identifier = client.locations(self.name)[0].__dict__['id']
+
+
 PARIS = {
     'station':
-        Station(name='Paris', code='FRPAR', coordinates=(48.856614, 2.3522219), identifier='8796001')
+        Station(name='Paris', code='FRPAR',
+                coordinates=(48.856614, 2.3522219), identifier='8796001')
 }
