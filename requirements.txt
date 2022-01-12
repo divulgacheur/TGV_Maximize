@@ -1,0 +1,5 @@
+argcomplete==1.12.3
+pyhafas==0.3.0
+python-dotenv==0.19.2
+requests==2.26.0
+Unidecode==1.3.2
