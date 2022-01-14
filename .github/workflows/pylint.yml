@@ -21,3 +21,5 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint `git ls-files|grep .py$|xargs` --fail-under=9.0
+      if: always()
+
