@@ -20,4 +20,4 @@ jobs:
         pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        python3 $(which pylint) `git ls-files|grep .py$|xargs`
+        pylint `git ls-files|grep .py$|xargs`
