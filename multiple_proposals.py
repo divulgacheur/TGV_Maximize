@@ -25,12 +25,11 @@ class MultipleProposals:
         first = self.proposals[0]
         second = self.proposals[1]
 
+        # For the berth only option, we exclude Intercites de Nuit proposals without a berth
         if opts.berth_only:
-            # For the berth only option, we don't print the Intercites de Nuit proposals
-            # without a berth
-            if (first.transporter == 'INTERCITES DE NUIT' and 'berths' not in first.remaining_seats)\
-                    or (second.transporter == 'INTERCITES DE NUIT' and 'berths' not in second.remaining_seats):
-                return
+            for seg in self.proposals:
+                if seg.transporter == 'INTERCITES DE NUIT' and 'berths' not in seg.remaining_seats:
+                    return
 
         print(
             f'{BColors.OKGREEN}'
