@@ -25,6 +25,10 @@ class Proposal:
 
     def __init__(self, duration, min_price, departure_date, departure_station, arrival_date,
                  arrival_station, transporter, vehicle_number, remaining_seats):
+        """
+        Initialize a Proposal object
+        """
+
         self.duration = duration
         self.min_price = min_price
         self.departure_date = departure_date
@@ -70,7 +74,7 @@ class Proposal:
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0',
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.5',
-            'Referer': 'https://www.oui.sncf/proposition/outward/train?wishId=95edb29e-9529-4e54-9645-01d0040da16d',
+            'Referer': 'https://www.oui.sncf/proposition/outward/train?wishId=9',
             'content-type': 'application/json',
             'x-client-app-id': 'VSD',
             'x-client-channel': 'web',
@@ -85,19 +89,24 @@ class Proposal:
             'TE': 'trailers',
             'Cookie': Config.OUISNCF_COOKIE
         }
-        data = {'context': {'features': [], 'paginationContext': {'travelSchedule': {'departureDate': dpt_date}}},
+        data = {'context': {'features': [],
+                            'paginationContext': {'travelSchedule': {'departureDate': dpt_date}}},
                 'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
                          'mainJourney': {'origin': {'codes': {'RESARAIL': {'code': dpt_station}}},
-                                         'destination': {'codes': {'RESARAIL': {'code': arr_station}}},
+                                         'destination': {
+                                             'codes': {'RESARAIL': {'code': arr_station}}},
                                          'via': None},
                          'directTravel': True,
-                         'schedule': {'outward': dpt_date, 'outwardType': 'DEPARTURE_FROM', 'inward': None,
+                         'schedule': {'outward': dpt_date, 'outwardType': 'DEPARTURE_FROM',
+                                      'inward': None,
                                       'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND',
-                         'passengers': [{'id': '0', 'typology': 'YOUNG', 'firstname': '', 'lastname': '',
-                                         'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
-                                         'discountCards': [{'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
-                                                            'dateOfBirth': Config.BIRTH_DATE}],
-                                         'bicycle': None}],
+                         'passengers': [
+                             {'id': '0', 'typology': 'YOUNG', 'firstname': '', 'lastname': '',
+                              'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
+                              'discountCards': [
+                                  {'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
+                                   'dateOfBirth': Config.BIRTH_DATE}],
+                              'bicycle': None}],
                          'checkBestPrices': False, 'salesMarket': 'fr-FR', 'channel': 'web',
                          'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
                          }
@@ -188,7 +197,7 @@ class Proposal:
         """
         print(
             f'{BColors.OKGREEN}'
-            f'{self.departure_station.name}' f' ({self.departure_date.strftime("%H:%M")}) → '
+            f'{self.departure_station.name} ({self.departure_date.strftime("%H:%M")}) → '
             f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")})',
             f'{self.transporter} {self.vehicle_number}' if long else '',
             f'| {self.display_seats()} ',
