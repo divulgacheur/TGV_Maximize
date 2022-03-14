@@ -1,5 +1,11 @@
 # TGVMax Finder
 
+---
+**NOTE**
+
+> This project is no longer maintained since release of SNCF-Connect App, whose backend architecture is quite different.
+---
+
 ## Setup
 
 Create and fill a `.env` file with your cookies contents, your birthdate and your TGVMax card number.
