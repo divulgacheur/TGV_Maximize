@@ -25,7 +25,7 @@ isort==5.10.1
 lazy-object-proxy==1.7.1
 logging-tree==1.9
 logx==0.1.1579232358
-lxml==4.7.1
+lxml==4.9.1
 Markdown==3.3.6
 mccabe==0.6.1
 migra==3.0.1621480950
