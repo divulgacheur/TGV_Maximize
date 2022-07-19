@@ -48,10 +48,6 @@ class Station:
         """
         if self.code is not None:
             return self.code, self.name
-        elif self.name.startswith('Paris'):
-            return 'FRPAR', 'Paris'
-        elif self.name.startswith('Lyon'):
-            return 'FRLYS', 'Lyon'
         elif self.name == 'Aeroport Paris-Charles de Gaulle TGV':
             return 'FRMLW', 'Paris Aéroport Roissy Charles-de-Gaulle'
         elif self.name == 'Massy TGV':
@@ -61,7 +57,7 @@ class Station:
         elif 'Montpellier' in self.name:
             return 'FRMPL', 'Montpellier'
         elif 'Nice' in self.name:
-            return 'FRNCE', 'Nice'
+            return 'FRNIC', 'Nice'
         elif self.name == 'Vierzon Ville':
             return 'FRXVZ', 'Vierzon'
         elif self.name == 'Vendôme Villiers sur Loire':
@@ -91,18 +87,35 @@ class Station:
         :param station_name: Station official name
         :return: Station code (5 letters)
         """
+        cookies = {
+            'x-visitor-id': 'fbae435c1650f2c4e99b983ed0a4ab204e7',
+            'x-correlationid': '47666724-c4c5-4ef3-8305-2e2b925d5344',
+            'x-user-device-id': 'a5e0b96f-e666-4177-b5be-ff990be8439e',
+            'x-nav-session-id': '43296fed-d4ea-4214-905d-f8d13c7baadd|1654596298686|1|',
+        }
 
-        station_match = requests.get(
-            'https://www.oui.sncf/booking/autocomplete-d2d?',
-            params={'uc': 'fr-FR', 'searchField': 'origin', 'searchTerm': unidecode(station_name)},
-            headers={'User-Agent': 'Mozilla/5.0'})
+        headers = {
+            'accept-language': 'fr-FR,fr;q=0.9',
+            'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
+        }
+
+
+        json_data = {
+            'searchTerm': station_name,
+            'keepStationsOnly': True,
+        }
+        station_match = requests.post(
+            'https://www.sncf-connect.com/bff/api/v1/autocomplete',
+            json=json_data,            cookies=cookies,
+            headers=headers)
         station_match.close()
         if station_match.status_code == 200:
             station_match_json = station_match.json()
             if station_match_json:
-                if 'rrCode' in station_match_json[0]:
-                    return station_match_json[0]['rrCode'], station_match_json[0]['label']
-                return station_match_json[0]['id'].split('_')[-1], station_match_json[0]['label']
+                if 'places' in station_match_json:
+                    for transport_place in station_match_json['places']['transportPlaces']:
+                        if transport_place['type']['label'] == 'Gare':
+                            return transport_place['codes'][0]['value'], station_match_json['places']['transportPlaces'][0]['label']
         return None
 
     @classmethod
@@ -152,6 +165,6 @@ class Station:
 
 PARIS = {
     'station':
-        Station(name='Paris', code='FRPAR',
+        Station(name='Paris', code='FRPLY',
                 coordinates=(48.856614, 2.3522219), identifier='8796001')
 }

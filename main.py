@@ -39,28 +39,28 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
     page_count = 1
     all_proposals = []
 
-    response = Proposal.get_next(dep_station, arr_station, day.strftime('%Y-%m-%dT%H:%M:00'), opts)
+    response = Proposal.get_next(dep_station, arr_station, day.strftime('%Y-%m-%dT%H:%M:00')+'.000Z', opts)
+    if response:
+        response_json = response.json()['longDistance']
+        sleep(2)
 
-    response_json = response.json()
-    sleep(1)
+        if response_json is not None:
+            all_proposals = Proposal.filter(response_json['proposals']['proposals'], opts.max_duration)
 
-    if response_json is not None:
-        all_proposals = Proposal.filter(response_json['travelProposals'], opts.max_duration)
-
-        while response_json['nextPagination'] and response_json['nextPagination']['type'] != 'NEXT_DAY':
-            if opts.verbosity:
-                print(f'\t Next page - {page_count}')
-            response = Proposal.get_next(dep_station,
-                                         arr_station,
-                                         Proposal.get_last_timetable(response),
-                                         opts.verbosity)
-            response_json = response.json()
-            page_count += 1
-            sleep(1)
-            if response_json is not None and 'travelProposals' in response_json:
-                all_proposals.extend(
-                    Proposal.filter(response_json['travelProposals'], opts.max_duration))
-    return Proposal.remove_duplicates(all_proposals, opts.verbosity) if all_proposals else []
+            while response_json['proposals']['pagination']['next']['changeDay'] is False:
+                if opts.verbosity:
+                    print(f'\t Next page - {page_count}')
+                response = Proposal.get_next(dep_station,
+                                             arr_station,
+                                             Proposal.get_last_timetable(response)+'.000Z',
+                                             opts.verbosity)
+                response_json = response.json()['longDistance']
+                page_count += 1
+                sleep(2)
+                if response_json is not None and 'proposals' in response_json:
+                    all_proposals.extend(
+                        Proposal.filter(response_json['proposals']['proposals'], opts.max_duration))
+        return Proposal.remove_duplicates(all_proposals, opts.verbosity) if all_proposals else []
 
 
 def display_indirect_proposals(dpt_direct_dest, arr_direct_dest, day, opts):

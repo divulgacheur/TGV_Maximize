@@ -1,5 +1,4 @@
 from datetime import datetime
-from json import dumps as json_dumps
 from sys import exit as sys_exit
 import requests
 
@@ -46,19 +45,16 @@ class Proposal:
         :param second_class_offers: JSON object of the offers
         :return: dict with seats and berths
         """
-        remaining_seats = {}
-        for offer in second_class_offers['offers']:
-            if offer['amount'] == 0:
-                placement_modes = offer['offerSegments'][0]['placement']['availablePlacementModes']
-                if placement_modes[1]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # BERTH_SECOND
-                    # if there is no linked offer, the berth offer is this one
-                    remaining_seats['berths'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
-                    # if remainingSeats is not set, it means there is no limit
-                    # 999 is a magic number, it means that there are more than 10 berths available
-                elif placement_modes[2]['availablePhysicalSpaces'][0]['linkedOfferKey'] is None:  # SEAT_SECOND
-                    # if there is no linked offer, the seat offer is this one
-                    remaining_seats['seats'] = offer['remainingSeats'] if offer['remainingSeats'] is not None else 999
-        return remaining_seats
+        remaining = {}
+        for offer in second_class_offers:
+            if float(offer['priceLabel'].split(' ')[0]) == 0:
+                for message in offer['messages']:
+                    if 'Plus que' in message['message']:
+                        physical_space = offer['comfortClass']['physicalSpaceLabel']
+                        remaining[physical_space] = int(
+                            [int(s) for s in message['message'].split() if s.isdigit()][0])
+
+        return remaining
 
     @staticmethod
     def get_next(dpt_station, arr_station, dpt_date, verbosity) -> requests.Response:
@@ -70,52 +66,73 @@ class Proposal:
         :param verbosity: enable verbosity
         :return: JSON response of the request
         """
+
         headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/94.0',
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Referer': 'https://www.oui.sncf/proposition/outward/train?wishId=9',
-            'content-type': 'application/json',
-            'x-client-app-id': 'VSD',
-            'x-client-channel': 'web',
+            'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
+            'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
             'x-market-locale': 'fr_FR',
-            'x-vsd-locale': 'fr_FR',
-            'X-INSTANA-L': '1,correlationType=web;correlationId=afc550728eb5e772',
-            'Origin': 'https://www.oui.sncf',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'TE': 'trailers',
-            'Cookie': Config.OUISNCF_COOKIE
+            'x-nav-current-path': '/app/en-en/home/shop/results/outward',
+            'cookie': Config.OUISNCF_COOKIE,
         }
-        data = {'context': {'features': [],
-                            'paginationContext': {'travelSchedule': {'departureDate': dpt_date}}},
-                'wish': {'id': '8938068f-7816-4ee3-8176-1c35e6a81245',
-                         'mainJourney': {'origin': {'codes': {'RESARAIL': {'code': dpt_station}}},
-                                         'destination': {
-                                             'codes': {'RESARAIL': {'code': arr_station}}},
-                                         'via': None},
-                         'directTravel': True,
-                         'schedule': {'outward': dpt_date, 'outwardType': 'DEPARTURE_FROM',
-                                      'inward': None,
-                                      'inwardType': 'DEPARTURE_FROM'}, 'travelClass': 'SECOND',
-                         'passengers': [
-                             {'id': '0', 'typology': 'YOUNG', 'firstname': '', 'lastname': '',
-                              'dateOfBirth': Config.BIRTH_DATE, 'age': 21,
-                              'discountCards': [
-                                  {'code': 'HAPPY_CARD', 'number': Config.TGVMAX_CARD_NUMBER,
-                                   'dateOfBirth': Config.BIRTH_DATE}],
-                              'bicycle': None}],
-                         'checkBestPrices': False, 'salesMarket': 'fr-FR', 'channel': 'web',
-                         'pets': [], 'context': {'sumoForTrain': {'eligible': True}}
-                         }
-                }
 
-        response = requests.post('https://www.oui.sncf/api/vsd/travels/outward/train/next',
-                                 headers=headers, data=json_dumps(data))
+        data = {
+            'schedule': {
+                'outward': {
+                    'date': dpt_date,
+                    'arrivalAt': False,
+                },
+            },
+            'mainJourney': {
+                'origin': {
+                    'label': 'Montpellier',
+                    'id': 'RESARAIL_STA_' + dpt_station,
+                    'geolocation': False,
+                },
+                'destination': {
+                    'label': 'Besançon Franche-Comté TGV (à 16km de Besançon centre)',
+                    'id': 'RESARAIL_STA_' + arr_station,
+                    'geolocation': False,
+                },
+            },
+            'passengers': [
+                {
+                    'id': '67161bc1-0e7a-40c8-8ff6-f66efaa77242',
+                    'customerId': '100025623309',
+                    'dateOfBirth': '2000-07-17',
+                    'discountCards': [
+                        {
+                            'code': 'HAPPY_CARD',
+                            'number': 'HC700678060',
+                            'label': 'MAX JEUNE',
+                        },
+                        {
+                            'code': 'ODS_PASS_ZOU!_ETUDES',
+                            'label': 'SUD Provence-Alpes-Côte d’Azur - Pass ZOU! Etudes',
+                        },
+                    ],
+                    'typology': 'YOUNG',
+                    'displayName': 'Theo Peltier',
+                    'firstName': 'Theo',
+                    'lastName': 'Peltier',
+                    'initials': 'TP',
+                    'withoutSeatAssignment': False,
+                },
+            ],
+            'pets': [],
+            'itineraryId': 'c23d46e2-5fcb-4ca3-80a9-da412f6ccedb',
+            'branch': 'SHOP',
+            'forceDisplayResults': True,
+            'directJourney': True,
+            'trainExpected': True,
+            'wishBike': False,
+            'strictMode': False,
+        }
 
-        if response.status_code != 200:
+        response = requests.post('https://www.sncf-connect.com/bff/api/v1/itineraries',
+                                 headers=headers, json=data)
+        if response.status_code == 404:
+            return False
+        elif response.status_code != 200:
             print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
             if verbosity:
                 print(response.text)
@@ -126,26 +143,45 @@ class Proposal:
         return response
 
     @staticmethod
+    def parse_duration(string):
+        hours = 0
+        if 'h' in string:
+            hours, minutes = string.split('h')
+        else:
+            minutes = string.split(' min')[0]
+        return int(hours) * 60 + int(minutes)
+
+    @staticmethod
+    def parse_date(obj: object, year: str):
+
+        date_string = obj['dateLabel'].split(': ')[-1] + ' ' + year + '/' + obj['timeLabel']
+        return datetime.strptime(date_string, '%a %d %b %Y/%H:%M')
+
+    @staticmethod
     def parse_proposal(proposal: any) -> 'Proposal':
         """
         Parse JSON proposal and return a Proposal object
         :param proposal: JSON object of the proposal
         :return: proposal object
         """
-        duration = proposal['duration'] / 60
-        min_price = proposal['minPrice']
-        departure_date = datetime.strptime(proposal['departureDate'], '%Y-%m-%dT%H:%M:00')
-        departure_station = Station.parse(proposal['origin'])
-        arrival_date = datetime.strptime(proposal['arrivalDate'], '%Y-%m-%dT%H:%M:00')
-        arrival_station = Station.parse(proposal['destination'])
-        second_class_offer = proposal['secondClassOffers']['offers'][0]
-        transporter = second_class_offer['offerSegments'][0]['transporter']
-        vehicle_number = second_class_offer['offerSegments'][0]['vehicleNumber']
+        duration = Proposal.parse_duration(proposal['durationLabel'])
+        min_price = float(proposal['bestPriceLabel'].split(' €')[0].replace(',', '.'))
+        departure_year = proposal['travelId'].split('-')[0]
+        departure_date = Proposal.parse_date(proposal['departure'], departure_year)
+        departure_station = proposal['departure']['originStationLabel']
+        arrival_date = Proposal.parse_date(proposal['arrival'], proposal['travelId'].split('-')[0])
+        arrival_station = proposal['arrival']['destinationStationLabel']
+        second_class_offer = proposal['secondComfortClassOffers']['offers']
+        transporter = proposal['timeline']['segments'][0]['transporter']['description']
+        vehicle_number = proposal['timeline']['segments'][0]['transporter']['number']
         if transporter == 'INTERCITES DE NUIT':
             # Because Intercites de nuit offers has berths there are parsed differently
-            remaining_seats = Proposal.parse_intercites_de_nuit(proposal['secondClassOffers'])
+            remaining_seats = Proposal.parse_intercites_de_nuit(second_class_offer)
         else:
-            seats = second_class_offer['remainingSeats']
+            if 'bestPriceRemainingSeatsLabel' in proposal and proposal['bestPriceRemainingSeatsLabel'].split(' ')[0].isdigit():
+                seats = int(proposal['bestPriceRemainingSeatsLabel'].split(' ')[0])
+            else:
+                seats = 999
             remaining_seats = {'seats': seats if seats is not None else 999}
             # 999 is a magic number to indicate that there are more than 10 seats
 
@@ -159,7 +195,8 @@ class Proposal:
         :response: response of the request to get proposal
         :return: departure datetime for travelProposals passed in parameter
         """
-        return response.json()['travelProposals'][-1]['departureDate']
+        return response.json()['longDistance']['proposals']['proposals'][-1]['travelId'].split('_')[
+                   0] + ':00'
 
     def display_seats(self) -> str:
         """
@@ -197,8 +234,8 @@ class Proposal:
         """
         print(
             f'{BColors.OKGREEN}'
-            f'{self.departure_station.name} ({self.departure_date.strftime("%H:%M")}) → '
-            f'{self.arrival_station.name} ({self.arrival_date.strftime("%H:%M")})',
+            f'{self.departure_station} ({self.departure_date.strftime("%H:%M")}) → '
+            f'{self.arrival_station} ({self.arrival_date.strftime("%H:%M")})',
             f'{self.transporter} {self.vehicle_number}' if long else '',
             f'| {self.display_seats()} ',
             f'{BColors.ENDC}'
@@ -216,7 +253,7 @@ class Proposal:
         filtered_proposals: [Proposal] = []
 
         for proposal in proposals:
-            if proposal['secondClassOffers'] and proposal['secondClassOffers']['offers']:
+            if proposal['status'] and proposal['status']['isBookable']:
                 proposal_obj = Proposal.parse_proposal(proposal)
 
                 if proposal_obj.min_price == 0:

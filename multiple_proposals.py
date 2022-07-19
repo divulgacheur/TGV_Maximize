@@ -33,17 +33,17 @@ class MultipleProposals:
 
         print(
             f'{BColors.OKGREEN}'
-            f'{first.departure_station.name} '
+            f'{first.departure_station} '
             f'({first.departure_date.strftime("%H:%M")}) → '
-            f'{first.arrival_station.name} ({first.arrival_date.strftime("%H:%M")})',
+            f'{first.arrival_station} ({first.arrival_date.strftime("%H:%M")})',
             f'{first.transporter} {first.vehicle_number}' if opts.long else '',
-            f'⭾ {second.departure_station.name} ({second.departure_date.strftime("%H:%M")})'
-            if second.departure_station.code != first.arrival_station.code
+            f'⭾ {second.departure_station} ({second.departure_date.strftime("%H:%M")})'
+            if second.departure_station != first.arrival_station
             else f'⏲  ({second.departure_date.strftime("%H:%M")})',
             # If connection stations are different, i.e. Nimes <-> Nimes Pont du Gard,
             # display the name of two connection stations
             # Else, display only the station name once
-            f'→ {second.arrival_station.name} ({second.arrival_date.strftime("%H:%M")})',
+            f'→ {second.arrival_station} ({second.arrival_date.strftime("%H:%M")})',
             f'{second.transporter} {second.vehicle_number}' if opts.long else '',
             f'| {second.display_seats() if second.get_remaining_seats() < first.get_remaining_seats() else first.display_seats()} ',
             f'{BColors.ENDC}',
