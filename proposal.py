@@ -49,10 +49,12 @@ class Proposal:
         for offer in second_class_offers:
             if float(offer['priceLabel'].split(' ')[0]) == 0:
                 for message in offer['messages']:
+                    physical_space = offer['comfortClass']['physicalSpaceLabel']
                     if 'Plus que' in message['message']:
-                        physical_space = offer['comfortClass']['physicalSpaceLabel']
-                        remaining[physical_space] = int(
-                            [int(s) for s in message['message'].split() if s.isdigit()][0])
+                        remaining_quantity = [int(s) for s in message['message'].split() if s.isdigit()][0]
+                    else:
+                        remaining_quantity = 999
+                    remaining[physical_space] = remaining_quantity
 
         return remaining
 
