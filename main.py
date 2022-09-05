@@ -46,7 +46,8 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
 
         if response_json is not None:
             all_proposals = Proposal.filter(response_json['proposals']['proposals'], opts.max_duration)
-
+            if opts.debug:
+                print(response_json['proposals'])
             while response_json['proposals']['pagination']['next']['changeDay'] is False:
                 if opts.verbosity:
                     print(f'\t Next page - {page_count}')
@@ -107,13 +108,14 @@ def display_indirect_proposals(dpt_direct_dest, arr_direct_dest, day, opts):
                                              day,
                                              opts=SearchOptions(
                                                  verbosity=opts.verbosity,
+                                                 debug=opts.debug,
                                                  max_duration=opts.max_duration)
                                              )
                 if result:
                     results[index] = result
                     if opts.verbosity:
                         print(f"Segment {index + 1} found")
-                        Proposal.display(result)
+                        Proposal.display(result, long=True)
                 else:
                     if opts.verbosity:
                         print(f"{BColors.FAIL} Segment {index + 1} not found {BColors.ENDC}")
@@ -155,7 +157,7 @@ def total_search(dpt_name: str, arr_name: str, days: int, days_delta: int, opts:
 
         print(f"Direct journey from {departure.formal_name} to {arrival.formal_name}")
         direct_proposals = get_available_seats(departure.code, arrival.code, day,
-                                               SearchOptions(opts.verbosity, opts.max_duration))
+                                               SearchOptions(opts.verbosity, opts.max_duration, opts.debug))
         Proposal.display(direct_proposals, opts.berth_only, opts.long)
 
         if not opts.direct_only:
@@ -182,8 +184,9 @@ def main():
                         action="store_true")
     parser.add_argument("--max-duration", type=int, help="Maximum duration of a journey",
                         default=600)
-    parser.add_argument("-q", "--quiet", help="Only show results", action="store_true")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Only show results")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
+    parser.add_argument("--debug", action="store_true", help="Debug")
     autocomplete(parser)
     args = parser.parse_args()
 
@@ -198,9 +201,10 @@ def main():
                      long=args.long,
                      max_duration=args.max_duration,
                      verbosity=args.verbosity,
-                     quiet=args.quiet
+                     quiet=args.quiet,
+                     debug=args.debug,
                  )
-                 )
+                )
 
 
 if __name__ == '__main__':
