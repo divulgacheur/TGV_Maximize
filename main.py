@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from locale import setlocale, LC_TIME
 from time import sleep
 from sys import exit as sys_exit
+from random import uniform
 
 from argcomplete import autocomplete
 from pyhafas import HafasClient
@@ -26,6 +27,9 @@ s = session()
 s.get("https://www.oui.sncf/")
 
 
+def wait_random_time():
+    sleep(uniform(2.5, 4.0))
+
 def get_available_seats(dep_station: str, arr_station: str, day: datetime,
                         opts: SearchOptions) -> [Proposal]:
     """
@@ -42,7 +46,7 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
     response = Proposal.get_next(dep_station, arr_station, day.strftime('%Y-%m-%dT%H:%M:00')+'.000Z', opts)
     if response:
         response_json = response.json()['longDistance']
-        sleep(2)
+        wait_random_time()
 
         if response_json is not None and response_json['proposals']['proposals']:
             all_proposals = Proposal.filter(response_json['proposals']['proposals'], opts.max_duration)
@@ -57,7 +61,7 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
                                              opts.verbosity)
                 response_json = response.json()['longDistance']
                 page_count += 1
-                sleep(2)
+                wait_random_time()
                 if response_json is not None and 'proposals' in response_json:
                     all_proposals.extend(
                         Proposal.filter(response_json['proposals']['proposals'], opts.max_duration))
