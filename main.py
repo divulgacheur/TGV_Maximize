@@ -44,7 +44,7 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
         response_json = response.json()['longDistance']
         sleep(2)
 
-        if response_json is not None:
+        if response_json is not None and response_json['proposals']['proposals']:
             all_proposals = Proposal.filter(response_json['proposals']['proposals'], opts.max_duration)
             if opts.debug:
                 print(response_json['proposals'])
