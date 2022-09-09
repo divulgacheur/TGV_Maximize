@@ -20,6 +20,6 @@ jobs:
         pip install -r requirements.txt
     - name: Analysing the code with pylint
       run: |
-        pylint `git ls-files|grep .py$|xargs` --fail-under=9.0
+        pylint `git ls-files|grep .py$|xargs` --fail-under=8.5
       if: always()
 

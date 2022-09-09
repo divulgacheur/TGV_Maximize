@@ -62,7 +62,7 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
                 response_json = response.json()['longDistance']
                 page_count += 1
                 wait_random_time()
-                    all_proposals.extend(
+                all_proposals.extend(
                         Proposal.filter(response_json['proposals']['proposals'], opts.max_duration))
         return Proposal.remove_duplicates(all_proposals, opts.verbosity) if all_proposals else []
 
