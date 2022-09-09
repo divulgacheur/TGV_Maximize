@@ -9,7 +9,7 @@ class SearchOptions:
     max_duration: int
 
     def __init__(self, via=None, max_duration=None, berth_only=False, long=False,
-                 direct_only=False, verbosity=False, quiet=False) -> None:
+                 direct_only=False, verbosity=False, quiet=False, debug = False) -> None:
         self.via = via
         self.berth_only = berth_only
         self.long = long
@@ -17,6 +17,7 @@ class SearchOptions:
         self.max_duration = max_duration
         self.verbosity = verbosity
         self.quiet = quiet
+        self.debug = debug
 
 
 class PromptOptions:
@@ -26,7 +27,9 @@ class PromptOptions:
 
     verbosity: bool
     quiet: bool
+    debug: bool
 
-    def __init__(self, verbosity, quiet):
+    def __init__(self, verbosity, quiet, debug):
         self.verbosity = verbosity
         self.quiet = quiet
+        self.debug = debug
