@@ -7,4 +7,5 @@ setup(name='TGV_Maximize',
       description='Python Distribution Utilities',
       author='Divulgacheur',
       author_email='github@theopeltier.me',
+      packages=['distutils', 'requests', 'dotenv'],
       )
