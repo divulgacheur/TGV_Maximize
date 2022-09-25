@@ -9,6 +9,11 @@
 ## Setup
 
 Create and fill a `.env` file with your cookies contents, your birthdate and your TGVMax card number.
+
+The two important cookies are : 
+  - __Secure-refresh-account-token --> It allows you to authentificate 
+  - datadome=SOMETHING' --> I don't know but seems to be important to avoid captcha 
+  
 <details>
   <summary>Tutorial to get your oui.sncf cookies. Reproduce it once connected. </summary>
 

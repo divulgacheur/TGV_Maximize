@@ -93,7 +93,8 @@ class Proposal:
         headers["Cookie"] = Config.REAUTHENTICATE
         response = session.post("https://www.sncf-connect.com/bff/api/v1/web-refresh/reauthenticate",
                                    headers=headers)
-        print(response)
+        if response.status_code != 200:
+            print("__Secure-refresh-account-tokem in REAUTHENTICATE in the .env file is misconfigured ! ")
         Config.update_cookies_from_dict("REAUTHENTICATE", session.cookies.get_dict())
 
         headers["Cookie"] = Config.REAUTHENTICATE
