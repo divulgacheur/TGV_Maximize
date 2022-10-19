@@ -1,10 +1,5 @@
 # TGVMax Finder
 
----
-**NOTE**
-
-> This project is no longer maintained since release of SNCF-Connect App, whose backend architecture is quite different.
----
 
 ## Setup
 
