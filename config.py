@@ -3,8 +3,25 @@ from typing import get_type_hints, Union
 
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
+def dict_cookie_from_str(str_cookies):
+    d_cookies = {}
+    l_cookies = str_cookies.split("; ")
+    for key_item in l_cookies:
+        i = key_item.find("=")
+        key = key_item[:i]
+        item = key_item[i+1:] 
+        d_cookies[key] = item
+    return d_cookies
+
+def str_cookies_from_dict(d_cookies):
+    str_cookie = ""
+    for key, item in d_cookies.items():
+        str_cookie += key + "="+ item + "; "
+    str_cookie = str_cookie[:-2]
+    return str_cookie
 
 class AppConfigError(Exception):
     """
@@ -21,11 +38,9 @@ class AppConfig:
     Application configuration.
     """
 
-    OUISNCF_COOKIE: str
     TGVMAX_CARD_NUMBER: str
     BIRTH_DATE: str
-    OUISNCF_STATS_COOKIE: str
-
+    REAUTHENTICATE: str
     """
     Map environment variables to class fields according to these rules:
       - Field won't be parsed unless it has a type annotation
@@ -56,9 +71,29 @@ class AppConfig:
             except ValueError:
                 raise AppConfigError(f'Unable to cast value of "{env[field]}" '
                                      f'to type "{var_type}" for "{field}" field') from None
+        self.write_temp_env()
 
     def __repr__(self):
         return str(self.__dict__)
+        
+    def update_cookies_from_dict(self, field, dict_cookies):
+        str_old = self.__dict__[field]
+        d_new_cookies = dict_cookie_from_str(str_old)
+        for key, value in dict_cookies.items():
+            d_new_cookies[key] = value
+        self.__dict__[field] = str_cookies_from_dict(d_new_cookies)
+        self.write_temp_env()
+    
+    def write_temp_env(self):
+        f = open("./.env", "w")
+        f.close()
+        f = open("./.env", "a")
+        for field in AppConfig.__annotations__:
+            str_write = field
+            value = self.__getattribute__(field)
+            str_write += "='" + value + "'"
+            f.write(str_write + "\n")
+        f.close()
 
 
 # Expose Config object for app to import

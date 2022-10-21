@@ -47,7 +47,7 @@ class Proposal:
         """
         remaining = {}
         for offer in second_class_offers:
-            if float(offer['priceLabel'].split(' ')[0]) == 0:
+            if float(offer['priceLabel'].split(' ')[0].replace(",", ".") ) == 0:
                 for message in offer['messages']:
                     physical_space = offer['comfortClass']['physicalSpaceLabel']
                     if 'Plus que' in message['message']:
@@ -70,12 +70,34 @@ class Proposal:
         """
 
         headers = {
-            'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
-            'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
-            'x-market-locale': 'fr_FR',
-            'x-nav-current-path': '/app/en-en/home/shop/results/outward',
-            'cookie': Config.OUISNCF_COOKIE,
+            'Host': 'www.sncf-connect.com', 
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:105.0) Gecko/20100101 Firefox/105.0', 
+            'Accept': 'application/json, text/plain, */*', 'Accept-Language': 'fr,en-US;q=0.7,en;q=0.3', 'Accept-Encoding': 'gzip, deflate, br', 
+            'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876', 'x-client-channel': 'web', 'x-client-app-id': 'front-web', 
+            'x-api-env': 'production', 'x-market-locale': 'fr_FR',
+            'x-email-hidden': '358C5C06A9357683EAF0119515C81AAE0A942BB5', 
+            'x-email-strong': '9b0b6129b4c95891f8965bc7ad8d537ae9a1c71f3fa26da516c246afd17b765e', 
+            'x-email-stronger': '860f0711e955b6bdb08000f7b4cba8c6b4eda78b5eb14e2bafae05510838f055', 
+            'x-con-s': 'CPfztUAPfztUAAHABBENChCgAAAAAAAAAAAAAAAAAAEDoAMAAQSAIQAYAAgkAUgAwABBIANABgACCQAqADAAEEgBEAGAAIJABIAMAAQSAGQAYAAgkAAA.YAAAAAAAAAAA', 
+            'x-con-id': 'fbac099fd2cccb74601b3c50ca1f697e78f', 'x-con-ex': 'fbab7d18833206847f893fb8a0d355225a5', 'x-app-version': '20220903.0.0-2022090300-641abe9ff5', 
+            'x-device-os-version': 'Linux (x86_64)', 'x-device-class': 'desktop', 
+            'x-attribution-referrer': 'https://www.sncf-connect.com/', 
+            'x-nav-previous-page': 'Homepage', 'x-nav-current-path': '/app/home/search', 
+            'x-visitor-type': '1', 'Origin': 'https://www.sncf-connect.com', 'DNT': '1', 
+            'Connection': 'keep-alive', 'Referer': 'https://www.sncf-connect.com/app/home/search?destinationLabel=Paris&destinationId=CITY_FR_6455259', 
+            'Sec-Fetch-Dest': 'empty', 'Sec-Fetch-Mode': 'cors', 'Sec-Fetch-Site': 'same-origin', 'Pragma': 'no-cache', 'Cache-Control': 'no-cache', 'Content-Length': '0'
         }
+
+        ####  reauthentification  ######
+        session = requests.Session()
+        headers["Cookie"] = Config.REAUTHENTICATE
+        response = session.post("https://www.sncf-connect.com/bff/api/v1/web-refresh/reauthenticate",
+                                   headers=headers)
+        if response.status_code != 200:
+            print("__Secure-refresh-account-tokem in REAUTHENTICATE in the .env file is misconfigured ! ")
+        Config.update_cookies_from_dict("REAUTHENTICATE", session.cookies.get_dict())
+
+        headers["Cookie"] = Config.REAUTHENTICATE
 
         data = {
             'schedule': {
@@ -104,7 +126,7 @@ class Proposal:
                     'discountCards': [
                         {
                             'code': 'HAPPY_CARD',
-                            'number': 'HC700678060',
+                            'number': Config.TGVMAX_CARD_NUMBER,
                             'label': 'MAX JEUNE',
                         },
                         {
@@ -130,8 +152,10 @@ class Proposal:
             'strictMode': False,
         }
 
-        response = requests.post('https://www.sncf-connect.com/bff/api/v1/itineraries',
+        response = session.post('https://www.sncf-connect.com/bff/api/v1/itineraries',
                                  headers=headers, json=data)
+        Config.update_cookies_from_dict("REAUTHENTICATE", session.cookies.get_dict())
+
         if response.status_code == 404:
             return False
         elif response.status_code != 200:
@@ -139,8 +163,7 @@ class Proposal:
             if verbosity:
                 print(response.text)
             if response.status_code == 403:
-                print('Too many requests. Resolve captcha at '
-                      'https://oui.sncf/billet-train and recover your new cookies')
+                print(response.text)
             sys_exit('Error in the request to get proposal')
         return response
 
