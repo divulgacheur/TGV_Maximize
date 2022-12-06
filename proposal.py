@@ -15,7 +15,7 @@ class Proposal:
     duration: int
     min_price: int
     departure_date: datetime
-    departure_station: FHStation
+    departure_station: Station
     arrival_date: datetime
     arrival_station: Station
     transporter: str
