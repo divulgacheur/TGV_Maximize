@@ -132,9 +132,7 @@ class Proposal:
 
         response = requests.post('https://www.sncf-connect.com/bff/api/v1/itineraries',
                                  headers=headers, json=data)
-        if response.status_code == 404:
-            return False
-        elif response.status_code != 200:
+        if response.status_code != 200:
             print(BColors.FAIL + 'Error: HTTP', str(response.status_code) + BColors.ENDC)
             if verbosity:
                 print(response.text)
