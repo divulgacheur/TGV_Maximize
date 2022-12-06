@@ -154,8 +154,7 @@ class Proposal:
         return int(hours) * 60 + int(minutes)
 
     @staticmethod
-    def parse_date(obj: object, year: str):
-
+    def parse_date(obj: any, year: str):
         date_string = obj['dateLabel'].split(': ')[-1] + ' ' + year + '/' + obj['timeLabel']
         return datetime.strptime(date_string, '%a %d %b %Y/%H:%M')
 
