@@ -15,7 +15,7 @@ class Proposal:
     duration: int
     min_price: int
     departure_date: datetime
-    departure_station: Station
+    departure_station: FHStation
     arrival_date: datetime
     arrival_station: Station
     transporter: str
@@ -104,7 +104,7 @@ class Proposal:
                     'discountCards': [
                         {
                             'code': 'HAPPY_CARD',
-                            'number': 'HC700678060',
+                            'number': Config.TGVMAX_CARD_NUMBER,
                             'label': 'MAX JEUNE',
                         },
                         {
