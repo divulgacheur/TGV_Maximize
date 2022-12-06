@@ -3,8 +3,9 @@
 from distutils.core import setup
 
 setup(name='TGV_Maximize',
-      version='1.0',
-      description='Python Distribution Utilities',
+      version='2.0',
+      description='CLI client to show all available tickets for MAXJeunes subscription',
       author='Divulgacheur',
       author_email='github@theopeltier.me',
+      packages=['argcomplete', 'chardet','distutils','pyhafas','pylint','python-dotenv', 'requests','Unidecode']
       )
