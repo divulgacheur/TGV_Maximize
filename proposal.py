@@ -103,7 +103,7 @@ class Proposal:
                     'dateOfBirth': '2000-07-17',
                     'discountCards': [
                         {
-                            'code': 'HAPPY_CARD',
+                            'code': 'TGV_MAX',
                             'number': Config.TGVMAX_CARD_NUMBER,
                             'label': 'MAX JEUNE',
                         },
