@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from unidecode import unidecode
 
 import requests
 from pyhafas import HafasClient
@@ -25,8 +24,8 @@ class Station:
         """
         Initialize a station
         """
-        self.name = name
-        self.formal_name = formal_name
+        self.name = name # Station name provided by the user
+        self.formal_name = formal_name # Official station name, displayed  in output
         self.coordinates = coordinates
         self.identifier = identifier
         self.code = code
@@ -36,6 +35,7 @@ class Station:
         Check if the station is in France
         :return: True if the station is in France, False otherwise
         """
+        # See https://en.wikipedia.org/wiki/List_of_UIC_country_codes
         return self.identifier[:2] == '87'
 
     # noinspection SpellCheckingInspection
@@ -46,12 +46,15 @@ class Station:
         (e.g. "Gare de Lyon/ Gare Montparnasse" -> "FRPAR")
         :return: Station code (5 letters)
         """
+        # The following mappings prevent error due to outdated stations names in Deutsch Bahn database,
+        # for exemple station named 'Saumur Rive Droit' doesn't exist anoymore on SNCFConnect
+        # because his name has changed, see 'oldname' on https://www.openstreetmap.org/node/3486337297
         if self.code is not None:
             return self.code, self.name
         elif self.name == 'Aeroport Paris-Charles de Gaulle TGV':
             return 'FRMLW', 'Paris Aéroport Roissy Charles-de-Gaulle'
-        elif self.name == 'Massy TGV':
-            return 'FRDJU', 'Paris Massy'
+        elif self.name.startswith('Massy'):
+            return 'FRDJU', 'Massy Gare TGV'
         elif self.name.startswith('Le Creusot Montceau'):
             return 'FRMLW', 'Le Creusot - Montceau TGV '
         elif 'Montpellier' in self.name:
@@ -75,18 +78,23 @@ class Station:
             query = self.name.replace('Hbf', '')
         else:
             query = self.name
-        result = self.get_station_code(query)
-        if not result:
-            raise ValueError(f'The station {self.name} does not exist')
+        result = self.get_station_code(query.lower())
         return result
 
     @staticmethod
     def get_station_code(station_name):
         """
         Get the station code from the station name
+        The station code is necessary to request SNCF Connect API
         :param station_name: Station official name
-        :return: Station code (5 letters)
+        :return: Station code (5 letters), exemple FRPAR for all Paris Stations
         """
+
+        if station_name == 'paris':
+            return 'FRPMO', 'Paris'
+        elif station_name == 'lyon':
+            return 'FRLPD', 'Lyon'
+
         cookies = {
             'x-visitor-id': 'fbae435c1650f2c4e99b983ed0a4ab204e7',
             'x-correlationid': '47666724-c4c5-4ef3-8305-2e2b925d5344',
@@ -106,7 +114,8 @@ class Station:
         }
         station_match = requests.post(
             'https://www.sncf-connect.com/bff/api/v1/autocomplete',
-            json=json_data,            cookies=cookies,
+            json=json_data,
+            cookies=cookies,
             headers=headers)
         station_match.close()
         if station_match.status_code == 200:
@@ -116,7 +125,7 @@ class Station:
                     for transport_place in station_match_json['places']['transportPlaces']:
                         if transport_place['type']['label'] == 'Gare':
                             return transport_place['codes'][0]['value'], station_match_json['places']['transportPlaces'][0]['label']
-        return None
+        raise ValueError(f'The station {station_name} does not exist, please use same station name as SNCF connect')
 
     @classmethod
     def get_farther(cls, departure: 'DirectDestination', arrival: 'DirectDestination',
@@ -152,15 +161,19 @@ class Station:
         Get the station code
         :return:
         """
-        code, formal_name = Station.get_station_code(self.name)
+        code, formal_name = Station.get_station_code(self.name.lower())
         self.code = code
         self.formal_name = formal_name
 
     def get_identifier(self):
         """
         Get the SNCF identifier of the station
+        Thanks to Hafas API, get the Deutsch Bahn station identifier from station name
+        For exemple Paris --> '8796001'
+        This identifier will be used to identify direct destinations thanks to api.direkt.bahn
         """
-        self.identifier = client.locations(self.name)[0].__dict__['id']
+        if self.identifier is None:
+            self.identifier = client.locations(self.name)[0].__dict__['id']
 
 
 PARIS = {
