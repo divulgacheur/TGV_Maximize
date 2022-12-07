@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
+from alive_progress import alive_bar
 
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
@@ -11,7 +12,6 @@ from random import uniform
 from argcomplete import autocomplete
 from pyhafas import HafasClient
 from pyhafas.profile import DBProfile
-from requests import session
 
 from bcolors import BColors
 from direct_destination import DirectDestination
@@ -22,9 +22,6 @@ from station import Station, PARIS
 
 setlocale(LC_TIME, "fr_FR.UTF-8")
 client = HafasClient(DBProfile())
-
-s = session()
-s.get("https://www.oui.sncf/")
 
 
 def wait_random_time():
@@ -42,36 +39,35 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
     """
     page_count = 1
     all_proposals = []
+    with alive_bar(title='Searching', stats=False,  disable=opts.quiet, monitor="Page {count}", monitor_end='' ) as progress_bar:
+        response = Proposal.get_next(dep_station, arr_station, day.strftime('%Y-%m-%dT%H:%M:00')+'.000Z', opts)
+        progress_bar()
 
-    response = Proposal.get_next(dep_station, arr_station, day.strftime('%Y-%m-%dT%H:%M:00')+'.000Z', opts)
-    if response:
-        response_json = response.json()['longDistance']
-        wait_random_time()
+        if response:
+            response_json = response.json()['longDistance']
+            wait_random_time()
 
-        if response_json is not None and response_json['proposals'] and response_json['proposals']['proposals']:
-            all_proposals = Proposal.filter(response_json['proposals']['proposals'], opts.max_duration)
-            if opts.debug:
-                print(response_json['proposals'])
-            while response_json['proposals']['pagination']['next']['changeDay'] is False:
-                if opts.verbosity:
-                    print(f'\t Next page - {page_count}')
-                response = Proposal.get_next(dep_station,
-                                             arr_station,
-                                             Proposal.get_last_timetable(response)+'.000Z',
-                                             opts.verbosity)
-                response_json = response.json()['longDistance']
-                page_count += 1
-                wait_random_time()
-                all_proposals.extend(
-                        Proposal.filter(response_json['proposals']['proposals'], opts.max_duration))
-        return Proposal.remove_duplicates(all_proposals, opts.verbosity) if all_proposals else []
+            if response_json is not None and response_json['proposals'] and response_json['proposals']['proposals']:
+                all_proposals = Proposal.filter(response_json['proposals']['proposals'], opts.max_duration)
+                if opts.debug:
+                    print(response_json['proposals'])
+                while response_json['proposals']['pagination']['next']['changeDay'] is False:
+                    response = Proposal.get_next(dep_station,
+                                                 arr_station,
+                                                 Proposal.get_last_timetable(response)+'.000Z',
+                                                 opts.verbosity)
+                    response_json = response.json()['longDistance']
+                    page_count += 1
+                    progress_bar()
+                    wait_random_time()
+                    all_proposals.extend(
+                            Proposal.filter(response_json['proposals']['proposals'], opts.max_duration))
+    return Proposal.remove_duplicates(all_proposals, opts.verbosity) if all_proposals else []
 
 
 def display_indirect_proposals(dpt_direct_dest, arr_direct_dest, day, opts):
     """
     Display indirect train proposals for a given day
-    :param dpt: station of departure
-    :param arr: station of arrival
     :param dpt_direct_dest: direct destinations of departure
     :param arr_direct_dest: direct destinations of arrival
     :param day: date of departure
@@ -81,7 +77,7 @@ def display_indirect_proposals(dpt_direct_dest, arr_direct_dest, day, opts):
     if not opts.via:
         intermediate_stations = dpt_direct_dest.get_common_stations(
             arr_direct_dest) + [PARIS]
-    else:
+    else: # if --via option is specified, search only proposals via this station
         via = Station(opts.via)
         via.get_code()
         via.get_identifier()
@@ -112,12 +108,13 @@ def display_indirect_proposals(dpt_direct_dest, arr_direct_dest, day, opts):
                                              opts=SearchOptions(
                                                  verbosity=opts.verbosity,
                                                  debug=opts.debug,
+                                                 quiet=opts.quiet,
                                                  max_duration=opts.max_duration)
                                              )
                 if result:
                     results[index] = result
                     if opts.verbosity:
-                        print(f"Segment {index + 1} found")
+                        print(f"Segment {index + 1} found :")
                         Proposal.display(result, long=True)
                 else:
                     if opts.verbosity:
@@ -131,36 +128,43 @@ def display_indirect_proposals(dpt_direct_dest, arr_direct_dest, day, opts):
                 # from Beziers-Nimes (~1h), because longer segment is rarer
 
                 if len(results) > 1:  # Display results if more than one segment found
+                    if opts.verbosity:
+                        print("Segments 1 & 2 combined :")
                     MultipleProposals.display(results[0], results[1], opts.berth_only, opts.long)
 
 
 def total_search(dpt_name: str, arr_name: str, days: int, days_delta: int, opts: SearchOptions):
     """
+    Search train proposal depending on search options provided
     :param dpt_name: name of departure station
     :param arr_name: name of arrival station
     :param days: number of days to search
     :param days_delta: number of days to search from today
-    :param opts: search options
+    :param opts: search options defined by user
     """
     date = datetime.now().replace(hour=0, minute=0) + timedelta(days=days_delta)
 
-    departure = Station(dpt_name)
-    departure.get_code()
-    departure.get_identifier()
-    dpt_direct_dest = DirectDestination.get(departure)
-
+    departure = Station(dpt_name) # Store station name
+    departure.get_code() # Get station code from name (ex: Paris-> FRPAR)
     arrival = Station(arr_name)
     arrival.get_code()
-    arrival.get_identifier()
-    arr_direct_dest = DirectDestination.get(arrival)
+    if opts.verbosity:
+        print("Stations codes acquired")
 
-    for day_counter in range(days):
+    # acquire and store direct destinations of both stations only if --direct option is not specified
+    if not opts.direct_only:
+        departure.get_identifier()
+        arrival.get_identifier()
+        dpt_direct_dest = DirectDestination.get(departure)
+        arr_direct_dest = DirectDestination.get(arrival)
+
+    for day_counter in range(days): # Iterate over the period (--period) specified by the user
         day = date + timedelta(days=day_counter)
         print(day.strftime("%c"))
 
         print(f"Direct journey from {departure.formal_name} to {arrival.formal_name}")
         direct_proposals = get_available_seats(departure.code, arrival.code, day,
-                                               SearchOptions(opts.verbosity, opts.max_duration, opts.debug))
+                                               SearchOptions(opts.verbosity, opts.max_duration, opts.debug, quiet=opts.quiet))
         Proposal.display(direct_proposals, opts.berth_only, opts.long)
 
         if not opts.direct_only:
@@ -206,7 +210,7 @@ def main():
                      verbosity=args.verbosity,
                      quiet=args.quiet,
                      debug=args.debug,
-                 )
+                    )
                 )
 
 
