@@ -203,7 +203,7 @@ class Proposal:
          which can be seats or berths
         """
         return " and ".join(
-            [(str(count) if count < 999 else 'more than 10') + ' ' + physical_space
+            [(str(count) if count < 999 else '+10') + ' ' + physical_space
              for physical_space, count in self.remaining_seats.items()
              ]) + ' remaining'
 
