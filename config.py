@@ -21,7 +21,7 @@ class AppConfig:
     Application configuration.
     """
 
-    OUISNCF_COOKIE: str
+    SNCFCONNECT_COOKIE: str
     TGVMAX_CARD_NUMBER: str
     BIRTH_DATE: str
 
