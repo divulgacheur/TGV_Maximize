@@ -35,20 +35,20 @@ class DirectDestination:
                     station['duration']}
             for station in request.json()}
         return DirectDestination(station, destinations)
-
-    def get_common_stations(self: 'DirectDestination',
+    @staticmethod
+    def get_common_stations(departure_direct_destinations: 'DirectDestination',
                             arrival_direct_destinations: 'DirectDestination') -> [Station]:
         """
         Returns a list of stations that are common to both the departure and arrival stations.
-        :param self: The departure station's direct destinations.
+        :param departure_direct_destinations: The departure station's direct destinations.
         :param arrival_direct_destinations: The arrival station's direct destinations.
         :return: A list of stations
         """
 
-        destinations_keys = set(self.destinations.keys()).intersection(
+        destinations_keys = set(departure_direct_destinations.destinations.keys()).intersection(
             arrival_direct_destinations.destinations.keys())
         destinations = list(itemgetter(*destinations_keys)(
-            self.destinations | arrival_direct_destinations.destinations))
+            departure_direct_destinations.destinations | arrival_direct_destinations.destinations))
 
         print(len(destinations), 'intermediate stations available')
 
