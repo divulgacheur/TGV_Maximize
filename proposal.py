@@ -47,7 +47,7 @@ class Proposal:
         """
         remaining = {}
         for offer in second_class_offers:
-            if float(offer['priceLabel'].split(' ')[0]) == 0:
+            if float(offer['priceLabel'].split(' ')[0].replace(",", ".") ) == 0:
                 for message in offer['messages']:
                     physical_space = offer['comfortClass']['physicalSpaceLabel']
                     if 'Plus que' in message['message']:
