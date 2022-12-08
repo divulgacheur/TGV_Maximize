@@ -100,7 +100,7 @@ class Proposal:
                 {
                     'id': '67161bc1-0e7a-40c8-8ff6-f66efaa77242',
                     'customerId': '100025623309',
-                    'dateOfBirth': '2000-07-17',
+                    'dateOfBirth': Config.BIRTH_DATE,
                     'discountCards': [
                         {
                             'code': 'TGV_MAX',
