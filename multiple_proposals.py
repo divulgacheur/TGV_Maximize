@@ -50,18 +50,24 @@ class MultipleProposals:
         )
 
     @staticmethod
-    def display(segment1, segment2, berth_only: bool = False, long: bool = False) -> None:
+    def display(segment1, segment2, berth_only: bool = False, long: bool = False, verbosity: bool = False) -> None:
         """
         :param segment1: list of proposals for the first segment
         :param segment2: list of proposals for the second segment
         :param berth_only: enable printing only the Intercites de Nuit proposals with a berth
+        :param verbosity: enable more detailed printing
         :param long: enable printing of detailed proposals, with transporter and vehicle number
         :return:
         """
+        proposal_found = False
         for proposal_1 in segment1:
             for proposal_2 in segment2:
                 if proposal_2.departure_date > proposal_1.arrival_date:
+                    if not proposal_found and verbosity:
+                        print("Segments 1 & 2 combined :")
                     MultipleProposals(proposal_1, proposal_2).print(
-                        SearchOptions(berth_only=berth_only,
-                                      long=long)
+                        SearchOptions(berth_only=berth_only, long=long)
                     )
+                    proposal_found = True
+        if not proposal_found and verbosity:
+            print("Connection is physically impossible between available proposals")
