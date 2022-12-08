@@ -74,7 +74,7 @@ class Proposal:
             'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
             'x-market-locale': 'fr_FR',
             'x-nav-current-path': '/app/en-en/home/shop/results/outward',
-            'cookie': Config.OUISNCF_COOKIE,
+            'cookie': Config.SNCFCONNECT_COOKIE,
         }
 
         data = {
