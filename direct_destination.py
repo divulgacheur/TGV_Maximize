@@ -55,10 +55,16 @@ class DirectDestination:
         return destinations
 
     @staticmethod
-    def get(departure):
+    def get(departure: Station):
         """
         Returns the direct destinations of a given station.
         """
+        response = get('https://api.direkt.bahn.guru/' + departure.identifier)
+        if response.status_code != 200:
+            print()
+            raise ValueError(f'{departure.name} identifier not found is UIC database.'
+                            ' Maybe you should use local station name, like Ventimiglia (IT)'
+                            ' instead of Vintimille (FR) ?')
         return DirectDestination.parse(
-            departure,
-            get('https://api.direkt.bahn.guru/' + departure.identifier))
+            departure, response
+            )
