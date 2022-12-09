@@ -42,7 +42,6 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
     :param opts: search option specified by the user
     :return: List of journey 'Proposal' objects
     """
-    page_count = 1
     all_proposals = []
     with alive_bar(title='Searching', stats=False, disable=opts.quiet, monitor="Page {count}") as progress_bar:
         response = Proposal.get_next(dep_station, arr_station, day.strftime('%Y-%m-%dT%H:%M:00') + '.000Z', opts)
@@ -61,7 +60,6 @@ def get_available_seats(dep_station: str, arr_station: str, day: datetime,
                                                  Proposal.get_last_timetable(response) + '.000Z',
                                                  opts.verbosity)
                     response_json = response.json()['longDistance']
-                    page_count += 1
                     progress_bar()  # pylint: disable=not-callable
                     wait_random_time()
                     all_proposals.extend(
