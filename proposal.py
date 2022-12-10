@@ -3,6 +3,7 @@ from sys import exit as sys_exit
 import requests
 
 from bcolors import BColors
+from captcha import resolve
 from station import Station
 from config import Config
 
@@ -144,6 +145,10 @@ class Proposal:
             if response.status_code == 403:
                 print('Too many requests. Resolve captcha at '
                       'https://oui.sncf/billet-train and recover your new cookies')
+
+                datadome_cookie = resolve(response.json()['url'])
+                Config.update_cookies_from_dict("SNCFCONNECT_COOKIE", datadome_cookie)
+
             sys_exit('Error in the request to get proposal')
         return response
 
