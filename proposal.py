@@ -70,11 +70,20 @@ class Proposal:
         """
 
         headers = {
-            'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
-            'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
-            'x-market-locale': 'fr_FR',
-            'x-nav-current-path': '/app/en-en/home/shop/results/outward',
-            'cookie': Config.SNCFCONNECT_COOKIE,
+        'authority': 'www.sncf-connect.com',
+        'accept': 'application/json, text/plain, */*',
+        'accept-language': 'fr-FR,fr;q=0.7',
+        'cache-control': 'no-cache',
+        'content-type': 'application/json',
+        'origin': 'https://www.sncf-connect.com',
+        'pragma': 'no-cache',
+        'referer': 'https://www.sncf-connect.com/app/home/shop/results/outward',
+        'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+        'x-api-env': 'production',
+        'x-app-version': '20221126.0.0-2022112600-4bb6b49271',
+        'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
+        'x-market-locale': 'fr_FR',
+        'cookie': Config.SNCFCONNECT_COOKIE,
         }
 
         data = {
@@ -86,12 +95,12 @@ class Proposal:
             },
             'mainJourney': {
                 'origin': {
-                    'label': 'Montpellier',
+                    'label': 'Do not remove',
                     'id': 'RESARAIL_STA_' + dpt_station,
                     'geolocation': False,
                 },
                 'destination': {
-                    'label': 'Besançon Franche-Comté TGV (à 16km de Besançon centre)',
+                    'label': 'Do not remove',
                     'id': 'RESARAIL_STA_' + arr_station,
                     'geolocation': False,
                 },
@@ -99,7 +108,7 @@ class Proposal:
             'passengers': [
                 {
                     'id': '67161bc1-0e7a-40c8-8ff6-f66efaa77242',
-                    'customerId': '100025623309',
+                    'customerId': '100025623302',
                     'dateOfBirth': Config.BIRTH_DATE,
                     'discountCards': [
                         {
@@ -107,16 +116,12 @@ class Proposal:
                             'number': Config.TGVMAX_CARD_NUMBER,
                             'label': 'MAX JEUNE',
                         },
-                        {
-                            'code': 'ODS_PASS_ZOU!_ETUDES',
-                            'label': 'SUD Provence-Alpes-Côte d’Azur - Pass ZOU! Etudes',
-                        },
                     ],
                     'typology': 'YOUNG',
-                    'displayName': 'Theo Peltier',
-                    'firstName': 'Theo',
-                    'lastName': 'Peltier',
-                    'initials': 'TP',
+                    'displayName': '',
+                    'firstName': '',
+                    'lastName': '',
+                    'initials': '',
                     'withoutSeatAssignment': False,
                 },
             ],
@@ -139,6 +144,10 @@ class Proposal:
             if response.status_code == 403:
                 print('Too many requests. Resolve captcha at '
                       'https://oui.sncf/billet-train and recover your new cookies')
+
+                datadome_cookie = captcha.resolve(response.json()['url'])
+                Config.update_cookies_from_dict("SNCFCONNECT_COOKIE", datadome_cookie)
+
             sys_exit('Error in the request to get proposal')
         return response
 
