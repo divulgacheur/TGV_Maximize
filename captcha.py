@@ -9,15 +9,14 @@ def resolve(captcha_url: str) -> str:
     :return:
     """
     print("A window will be opened with a captcha. Resolve it and come back in the script")
-    driver = webdriver.Firefox()
-    driver.get(captcha_url)
-    print("Press enter if you resolved successfully the captcha. Instead, exit the script")
+    web_browser = webdriver.Firefox()
+    web_browser.get(captcha_url) # Navigate to this url
+    print("Press enter if you resolved successfully the captcha. Instead, please exit the script")
     input()
-    requests_sent = driver.requests
     datadome = None
-    for request in requests_sent:
-        if request.url.startswith('https://geo.captcha-delivery.com/captcha/check'):
-            json_datadome = request.response.body
+    for request_sent in web_browser.requests:
+        if request_sent.url.startswith('https://geo.captcha-delivery.com/captcha/check'):
+            json_datadome = request_sent.response.body
             datadome = loads(json_datadome)
             print(datadome['cookie'])
     if datadome is not None:

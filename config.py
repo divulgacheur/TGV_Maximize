@@ -73,11 +73,11 @@ class AppConfig:
     def __repr__(self):
         return str(self.__dict__)
 
-    def update_cookies_from_dict(self, field, str_cookies):
-        str_old = self.__dict__[field]
-        d_new_cookies = str_old
-        print('old-new',d_new_cookies, str_cookies)
+    @staticmethod
+    def update_cookies_from_dict(field, str_cookies):
         set_key('.env',field, str_cookies)
+        print('new cookie added to .env:', str_cookies)
+
 
 
 # Expose Config object for app to import
