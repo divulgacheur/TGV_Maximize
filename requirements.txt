@@ -1,4 +1,4 @@
-alive-progress~=2.4.1
+alive-progress~=3.0.1
 argcomplete~=2.0.0
 argparse~=1.4.0
 chardet~=4.0.0
