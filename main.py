@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, SUPPRESS
 from datetime import datetime, timedelta
 from locale import setlocale, LC_TIME
 from time import sleep
@@ -19,6 +19,7 @@ from multiple_proposals import MultipleProposals
 from options import SearchOptions
 from proposal import Proposal
 from station import Station, PARIS
+from statistics import Statistics
 
 setlocale(LC_TIME, "fr_FR.UTF-8")
 client = HafasClient(DBProfile())
@@ -181,7 +182,15 @@ def main():
     """
     Main function
     """
-    parser = ArgumentParser()
+    parser = ArgumentParser(add_help=False)
+    parser.add_argument("--statistics", action="store_true", help="Show only account statistics")
+    args, _ = parser.parse_known_args()
+
+    if args.statistics:
+        s = Statistics()
+        s.analyze()
+        exit(0)
+
     parser.add_argument("stations", metavar="station", help="Station names", nargs=2)
     parser.add_argument("-t", "--timedelta", help="How many days from today", type=int, default=1)
     parser.add_argument("-p", "--period", help="Number of days to search", type=int, default=1)
@@ -199,6 +208,10 @@ def main():
     parser.add_argument("-q", "--quiet", action="store_true", help="Only show results")
     parser.add_argument("-v", "--verbosity", action="store_true", help="Verbosity")
     parser.add_argument("--debug", action="store_true", help="Debug")
+    parser.add_argument('-h', '--help', action='help', default=SUPPRESS,
+                        help='Show this help message and exit.')
+
+
     autocomplete(parser)
     args = parser.parse_args()
 
