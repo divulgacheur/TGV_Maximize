@@ -22,8 +22,6 @@ class AppConfig:
     """
 
     SNCFCONNECT_COOKIE: str
-    TGVMAX_CARD_NUMBER: str
-    BIRTH_DATE: str
 
     """
     Map environment variables to class fields according to these rules:

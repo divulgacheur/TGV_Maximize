@@ -83,7 +83,7 @@ class Proposal:
         'x-app-version': '20221126.0.0-2022112600-4bb6b49271',
         'x-bff-key': 'ah1MPO-izehIHD-QZZ9y88n-kku876',
         'x-market-locale': 'fr_FR',
-        'cookie': Config.SNCFCONNECT_COOKIE,
+         #"'cookie': Config.SNCFCONNECT_COOKIE,
         }
 
         data = {
@@ -109,11 +109,11 @@ class Proposal:
                 {
                     'id': '67161bc1-0e7a-40c8-8ff6-f66efaa77242',
                     'customerId': '100025623302',
-                    'dateOfBirth': Config.BIRTH_DATE,
+                    'dateOfBirth': '2000-01-01',
                     'discountCards': [
                         {
                             'code': 'TGV_MAX',
-                            'number': Config.TGVMAX_CARD_NUMBER,
+                            'number': '29090125700000000',
                             'label': 'MAX JEUNE',
                         },
                     ],
