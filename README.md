@@ -23,6 +23,7 @@ Positional arguments:
   station               Station names
 
 Options:
+  --statistics                                  Show only account statistics
   -h, --help                                    Show this help message and exit
   -t TIMEDELTA, --timedelta TIMEDELTA           How many days from today
   -p PERIOD, --period PERIOD                    Number of days to search
