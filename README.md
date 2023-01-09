@@ -5,7 +5,7 @@
 
 <b>Python 3.10+</b> is required. 
 
-Create and fill a `.env` file with your cookies contents, your birthdate and your TGVMax card number.
+Create and fill a `.env` file with your cookies content.
 <details>
   <summary><b>Follow</b> this tutorial to get your <code>sncf-connect.com</code> cookies. Reproduce it once you are connected to your account.  
   <i>Altough the website presented is the old <code>oui.sncf</code>, it still working on <code>sncf-Connect.com</code></i></summary>
