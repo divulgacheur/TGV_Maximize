@@ -18,7 +18,7 @@ def resolve(captcha_url: str) -> str:
         if request_sent.url.startswith('https://geo.captcha-delivery.com/captcha/check'):
             json_datadome = request_sent.response.body
             datadome = loads(json_datadome)
-            print(datadome['cookie'])
+            print(datadome['cookie'].split(';')[0])
     if datadome is not None:
-        return datadome['cookie']
+        return datadome['cookie'].split(';')[0]
     raise ValueError('Captcha has not been successfully resolved')
