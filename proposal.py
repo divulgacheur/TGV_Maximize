@@ -2,11 +2,13 @@ from datetime import datetime
 from sys import exit as sys_exit
 import requests
 
+from rich.console import Console
+console = Console()
+
 from bcolors import BColors
 from captcha import resolve
 from station import Station
 from config import Config
-
 
 class Proposal:
     """
@@ -174,13 +176,13 @@ class Proposal:
         min_price = float(proposal['bestPriceLabel'].split(' €')[0].replace(',', '.'))
         departure_year = proposal['travelId'].split('-')[0]
         departure_date = Proposal.parse_date(proposal['departure'], departure_year)
-        departure_station = proposal['departure']['originStationLabel']
+        departure_station = Station(proposal['departure']['originStationLabel'])
         arrival_date = Proposal.parse_date(proposal['arrival'], proposal['travelId'].split('-')[0])
-        arrival_station = proposal['arrival']['destinationStationLabel']
+        arrival_station = Station(proposal['arrival']['destinationStationLabel'])
         second_class_offer = proposal['secondComfortClassOffers']['offers']
-        transporter = proposal['timeline']['segments'][0]['transporter']['description']
+        transporter = Proposal.parse_transporter(proposal)
         vehicle_number = proposal['timeline']['segments'][0]['transporter']['number']
-        if transporter == 'INTERCITES DE NUIT':
+        if transporter == 'IC NUIT':
             # Because Intercites de nuit offers has berths there are parsed differently
             remaining_seats = Proposal.parse_intercites_de_nuit(second_class_offer)
         else:
@@ -193,6 +195,17 @@ class Proposal:
 
         return Proposal(duration, min_price, departure_date, departure_station, arrival_date,
                         arrival_station, transporter, vehicle_number, remaining_seats)
+    @staticmethod
+    def parse_transporter(proposal: any) -> str:
+        """
+        Returns transporter name formatted as a less than 10 characters string
+        """
+        transporter = proposal['timeline']['segments'][0]['transporter']['description']
+        match transporter:
+            case 'INTERCITES DE NUIT':
+                return 'IC NUIT'
+            case _:
+                return transporter
 
     @staticmethod
     def get_last_timetable(response: requests.Response) -> str:
@@ -217,7 +230,7 @@ class Proposal:
     @staticmethod
     def display(proposals: ['Proposal'] or None, berth_only: bool = False, long: bool = False):
         """
-        Display the proposals in a table
+        Display the proposals in a table format
         :param proposals:
         :param berth_only:
         :param long:
@@ -225,27 +238,28 @@ class Proposal:
         """
 
         if proposals:
-            for proposal in proposals:
+            for index, proposal in enumerate(proposals):
                 if berth_only and proposal.transporter == 'INTERCITES DE NUIT':
                     if 'berths' in proposal.remaining_seats:
-                        proposal.print(long=long)
+                        proposal.print(long=long, color=index%2)
                 else:
-                    proposal.print(long=long)
+                    proposal.print(long=long, color=index%2)
 
-    def print(self, long: bool) -> None:
+    def print(self, long: bool, color = 0) -> None:
         """
         Prints the proposal object in a human-readable format
         :param long: enable printing of detailed proposals, including transporter and vehicle number
+        :param color:
         :return: None
         """
-        print(
-            f'{BColors.OKGREEN}'
-            f'{self.departure_station} ({self.departure_date.strftime("%H:%M")}) → '
-            f'{self.arrival_station} ({self.arrival_date.strftime("%H:%M")})',
-            f'{self.transporter} {self.vehicle_number}' if long else '',
-            f'| {self.display_seats()} ',
-            f'{BColors.ENDC}'
-        )
+        style = " on rgb(0,83,167)" if color == 0 else " on rgb(4,39,112)"
+        console.print(f'{self.departure_station.display_name.center(23)} ', style='default'+style, end='')
+        console.print(f'{self.departure_date.strftime("%H:%M")} ', style='bold yellow'+style, highlight=False, end='')
+        console.print(f'→ {self.arrival_station.display_name.center(23)} ', style='default'+style, end='')
+        console.print(f'{self.arrival_date.strftime("%H:%M")} ', style='bold yellow'+style, highlight=False, end='')
+        if long:
+            console.print(f' {self.transporter.center(10)} {self.vehicle_number.center(5)}', style='default'+style, end='')
+        console.print(f' | {self.display_seats()} ', style='default'+style)
 
     @staticmethod
     def filter(proposals: [any], direct_journey_max_duration: int, get_unavailable: bool = False,

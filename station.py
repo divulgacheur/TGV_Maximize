@@ -15,20 +15,22 @@ class Station:
     Class for a station.
     """
     name: str
+    formal_name: str
+    display_name: str
+    coordinates: tuple[float]
     identifier: str
-    latitude: float
-    longitude: tuple[float]
     code: str
 
     def __init__(self, name, formal_name=None, coordinates=None, identifier=None, code=None):
         """
         Initialize a station
         """
-        self.name = name # Station name provided by the user
-        self.formal_name = formal_name # Official station name, displayed  in output
+        self.name = name # Official station name
+        self.formal_name = formal_name # , displayed  in output
         self.coordinates = coordinates
         self.identifier = identifier
         self.code = code
+        self.display_name= self.get_display_name()
 
     def is_in_france(self):
         """
@@ -175,6 +177,17 @@ class Station:
         if self.identifier is None:
             self.identifier = client.locations(self.name)[0].__dict__['id']
 
+    def get_display_name(self, preserve_official_name=False):
+        if preserve_official_name:
+            return self.name
+        else:
+            match self.name:
+                case "Montpellier Sud De France":
+                    return "Montpellier TGV (SdF)"
+                case _:
+                    return self.name\
+                        .removesuffix(" 1 Et 2")\
+                        .removesuffix(' Rhone-Alpes Sud')
 
 PARIS = {
     'station':

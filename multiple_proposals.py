@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from bcolors import BColors
+from proposal import console
 from options import SearchOptions
 
 if TYPE_CHECKING:
@@ -15,10 +15,11 @@ class MultipleProposals:
     def __init__(self, *proposals: 'Proposal'):
         self.proposals = proposals
 
-    def print(self, opts: SearchOptions) -> None:
+    def print(self, opts: SearchOptions, color = True) -> None:
         """
         Prints the MultipleProposals object in a human-readable format
         :param opts:
+        :param color: Allow alternating background color on every other line
         :return: None
         """
 
@@ -30,23 +31,27 @@ class MultipleProposals:
             for seg in self.proposals:
                 if seg.transporter == 'INTERCITES DE NUIT' and 'berths' not in seg.remaining_seats:
                     return
+        style = " on rgb(0,83,167)" if color else " on rgb(4,39,112)"
+        console.print(f'{first.departure_station.display_name.center(23)} ', style='default'+style, end='')
+        console.print(f'{first.departure_date.strftime("%H:%M")}',style='bold yellow'+style, highlight=False, end='')
+        console.print(f' → {first.arrival_station.display_name.center(23)}', style='default'+style, end='' )
+        console.print(f' {first.arrival_date.strftime("%H:%M")} ', style='bold yellow'+style, highlight=False, end='')
+        console.print(f' {first.transporter.center(10)} {first.vehicle_number.center(5)}' if opts.long else '' , style='default'+style, end='')
 
-        print(
-            f'{BColors.OKGREEN}'
-            f'{first.departure_station} '
-            f'({first.departure_date.strftime("%H:%M")}) → '
-            f'{first.arrival_station} ({first.arrival_date.strftime("%H:%M")})',
-            f'{first.transporter} {first.vehicle_number}' if opts.long else '',
-            f'⭾ {second.departure_station} ({second.departure_date.strftime("%H:%M")})'
-            if second.departure_station != first.arrival_station
-            else f'⏲  ({second.departure_date.strftime("%H:%M")})',
-            # If connection stations are different, i.e. Nimes <-> Nimes Pont du Gard,
-            # display the name of two connection stations
-            # Else, display only the station name once
-            f'→ {second.arrival_station} ({second.arrival_date.strftime("%H:%M")})',
-            f'{second.transporter} {second.vehicle_number}' if opts.long else '',
-            f'| {second.display_seats() if second.get_remaining_seats() < first.get_remaining_seats() else first.display_seats()} ',
-            f'{BColors.ENDC}',
+        # If connection stations are different, i.e. Nimes <-> Nimes Pont du Gard,
+        # display the name of two connection stations
+        # Else, display only the station name once
+        if second.departure_station.display_name != first.arrival_station.display_name:
+            console.print(f' ⭾ {second.departure_station.display_name.center(23)}', style='default'+style, end='')
+            console.print(f' {second.departure_date.strftime("%H:%M")}', style='bold yellow'+style, highlight=False, end='')
+        else:
+            console.print(f' ⏲  {second.departure_date.strftime("%H:%M")}', style='bold yellow'+style, highlight=False, end='')
+
+        console.print(f' → {second.arrival_station.display_name.center(23)} ', style='default'+style, end='' )
+        console.print(f'{second.arrival_date.strftime("%H:%M")} ', style='bold yellow'+style, highlight=False, end='')
+        console.print(
+            f' {second.transporter.center(10)} {second.vehicle_number.center(5)}' if opts.long else '',
+            f'| {second.display_seats() if second.get_remaining_seats() < first.get_remaining_seats() else first.display_seats()} ', style='default'+style
         )
 
     @staticmethod
@@ -59,6 +64,7 @@ class MultipleProposals:
         :param long: enable printing of detailed proposals, with transporter and vehicle number
         :return:
         """
+        background = True
         proposal_found = False
         for proposal_1 in segment1:
             for proposal_2 in segment2:
@@ -66,8 +72,11 @@ class MultipleProposals:
                     if not proposal_found and verbosity:
                         print("Segments 1 & 2 combined :")
                     MultipleProposals(proposal_1, proposal_2).print(
-                        SearchOptions(berth_only=berth_only, long=long)
-                    )
+                        SearchOptions(berth_only=berth_only, long=long),  color=background)
                     proposal_found = True
+                    if background:
+                        background = False
+                    else:
+                        background = True
         if not proposal_found and verbosity:
             print("Connection is physically impossible between available proposals")
