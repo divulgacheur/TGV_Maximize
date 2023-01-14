@@ -1,3 +1,6 @@
+"""
+Code related to train stations
+"""
 from typing import TYPE_CHECKING
 
 import requests
@@ -15,20 +18,21 @@ class Station:
     Class for a station.
     """
     name: str
+    formal_name: str
+    display_name: str
+    coordinates: tuple[float]
     identifier: str
-    latitude: float
-    longitude: tuple[float]
     code: str
 
-    def __init__(self, name, formal_name=None, coordinates=None, identifier=None, code=None):
+    def __init__(self, name, coordinates=None, identifier=None, code=None):
         """
         Initialize a station
         """
-        self.name = name # Station name provided by the user
-        self.formal_name = formal_name # Official station name, displayed  in output
+        self.name = name # Official station name
         self.coordinates = coordinates
         self.identifier = identifier
         self.code = code
+        self.display_name= self.get_display_name()
 
     def is_in_france(self):
         """
@@ -41,7 +45,7 @@ class Station:
     # noinspection SpellCheckingInspection
     def name_to_code(self) -> (str, str) or None:
         """
-        Get the station code from the station name
+        Get the station code (useful for SNCF Connect) from the station name (founded using Deutsch Bahn database)
         For multiple station in the same city, return generic codes to avoid ambiguity
         (e.g. "Gare de Lyon/ Gare Montparnasse" -> "FRPAR")
         :return: Station code (5 letters)
@@ -49,37 +53,46 @@ class Station:
         # The following mappings prevent error due to outdated stations names in Deutsch Bahn database,
         # for exemple station named 'Saumur Rive Droit' doesn't exist anoymore on SNCFConnect
         # because his name has changed, see 'oldname' on https://www.openstreetmap.org/node/3486337297
+        # The following mappings prevent error due to outdated stations names in Deutsch Bahn database,
+        # for exemple station named 'Saumur Rive Droit' doesn't exist anoymore on SNCFConnect
+        # because his name has changed, see 'oldname' on https://www.openstreetmap.org/node/3486337297
         if self.code is not None:
             return self.code, self.name
-        elif self.name == 'Aeroport Paris-Charles de Gaulle TGV':
-            return 'FRMLW', 'Paris Aéroport Roissy Charles-de-Gaulle'
-        elif self.name.startswith('Massy'):
-            return 'FRDJU', 'Massy Gare TGV'
-        elif self.name.startswith('Le Creusot Montceau'):
-            return 'FRMLW', 'Le Creusot - Montceau TGV '
-        elif 'Montpellier' in self.name:
-            return 'FRMPL', 'Montpellier'
-        elif 'Nice' in self.name:
-            return 'FRNIC', 'Nice'
-        elif self.name == 'Vierzon Ville':
-            return 'FRXVZ', 'Vierzon'
-        elif self.name == 'Vendôme Villiers sur Loire':
-            return 'FRAFM', 'Vendôme'
-        elif self.name == 'Moulins-sur-Allier':
-            return 'FRXMU', 'Moulins'
-        elif self.name == 'Saumur Rive Droit':
-            return 'FRACN', 'Saumur'
-        elif self.name == 'Orange(Avignon)':
-            return 'FRXOG', 'Orange'
-        elif self.name.endswith('Ville'):  # endswith because Montauban-Ville-Bourbon
-            query = self.name.replace('Ville', '')
-        elif self.name.endswith('Hbf'):
-            # Hbf == German for central railway station, see https://en.wikipedia.org/wiki/HBF
-            query = self.name.replace('Hbf', '')
-        else:
-            query = self.name
-        result = self.get_station_code(query.lower())
-        return result
+
+        if self.name.startswith('Paris'):
+            return 'FRPAR', 'Paris (toutes gares intramuros)'
+
+        match self.name:
+            case 'Aeroport Paris-Charles de Gaulle TGV':
+                return 'FRMLW', 'Paris Aéroport Roissy Charles-de-Gaulle'
+            case 'Massy':
+                return 'FRDJU', 'Massy Gare TGV'
+            case 'Le Creusot Montceau':
+                return 'FRMLW', 'Le Creusot - Montceau TGV '
+            case 'Montpellier':
+                return 'FRMPL', 'Montpellier'
+            case 'Nice':
+                return 'FRNIC', 'Nice'
+            case 'Vierzon Ville':
+                return 'FRXVZ', 'Vierzon'
+            case 'Vendôme Villiers sur Loire':
+                return 'FRAFM', 'Vendôme'
+            case 'Moulins-sur-Allier':
+                return 'FRXMU', 'Moulins'
+            case 'Saumur Rive Droit':
+                return 'FRACN', 'Saumur'
+            case 'Orange(Avignon)':
+                return 'FRXOG', 'Orange'
+            case _:
+                if self.name.endswith('Ville'):  # endswith because Montauban-Ville-Bourbon
+                    query = self.name.replace('Ville', '')
+                elif self.name.endswith('Hbf'):
+                    # Hbf == German for central railway station, see https://en.wikipedia.org/wiki/HBF
+                    query = self.name.replace('Hbf', '')
+                else:
+                    query = self.name
+                result = self.get_station_code(query.lower())
+                return result
 
     @staticmethod
     def get_station_code(station_name):
@@ -90,14 +103,9 @@ class Station:
         :return: Station code (5 letters), exemple FRPAR for all Paris Stations
         """
 
-        if station_name == 'paris':
-            return 'FRPMO', 'Paris'
-        elif station_name == 'lyon':
-            return 'FRLPD', 'Lyon'
-
         cookies = {
             'x-visitor-id': 'fbae435c1650f2c4e99b983ed0a4ab204e7',
-            'x-correlationid': '47666724-c4c5-4ef3-8305-2e2b925d5344',
+            'x-correlation': '47666724-c4c5-4ef3-8305-2e2b925d5344',
             'x-user-device-id': 'a5e0b96f-e666-4177-b5be-ff990be8439e',
             'x-nav-session-id': '43296fed-d4ea-4214-905d-f8d13c7baadd|1654596298686|1|',
         }
@@ -116,16 +124,18 @@ class Station:
             'https://www.sncf-connect.com/bff/api/v1/autocomplete',
             json=json_data,
             cookies=cookies,
-            headers=headers)
+            headers=headers,
+            timeout=10)
         station_match.close()
-        if station_match.status_code == 200:
-            station_match_json = station_match.json()
-            if station_match_json:
-                if 'places' in station_match_json:
-                    for transport_place in station_match_json['places']['transportPlaces']:
-                        if transport_place['type']['label'] == 'Gare':
-                            return transport_place['codes'][0]['value'], station_match_json['places']['transportPlaces'][0]['label']
-        raise ValueError(f'The station {station_name} does not exist, please use same station name as SNCF connect')
+        if station_match.status_code != 200:
+            raise RuntimeError('The SNCF Connect station autocomplete API is not available')
+        station_match_json = station_match.json()
+        if not station_match_json or len(station_match_json['places']['transportPlaces']) < 1:
+            raise ValueError(f'The station {station_name} does not exist, please use same station name as SNCF connect')
+
+        for transport_place in station_match_json['places']['transportPlaces']:
+            if transport_place['type']['label'] == 'Gare':
+                return transport_place['codes'][0]['value'], station_match_json['places']['transportPlaces'][0]['label']
 
     @classmethod
     def get_farther(cls, departure: 'DirectDestination', arrival: 'DirectDestination',
@@ -175,6 +185,22 @@ class Station:
         if self.identifier is None:
             self.identifier = client.locations(self.name)[0].__dict__['id']
 
+    def get_display_name(self, preserve_official_name=False):
+        """
+        Return station name not to long
+        :param preserve_official_name: disable name length reduction
+        :return: short lisible station name that will be prompted
+        """
+        if preserve_official_name:
+            return self.name
+
+        match self.name:
+            case "Montpellier Sud De France":
+                return "Montpellier TGV (SdF)"
+            case _:
+                return self.name\
+                    .removesuffix(" 1 Et 2")\
+                    .removesuffix(' Rhone-Alpes Sud')
 
 PARIS = {
     'station':

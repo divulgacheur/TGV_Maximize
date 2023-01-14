@@ -2,7 +2,7 @@
 
 > #### Le but de cet outil est de permettre de trouver les trajets TGVmax disponibles entre deux villes.
 >#### Il est possible de choisir le nombre de trajets à afficher et de choisir la date de départ ainsi que le nombre de jours à afficher.
->#### A terme, il sera possible de trouver les trajets TGVmax entre deux villes en intégrant le découpage du trajet, afin de maximiser les chances de trouver un trajet même lors des périodes de forte affluences.
+>#### À terme, il sera possible de trouver les trajets TGVmax entre deux villes en intégrant le découpage du trajet, afin de maximiser les chances de trouver un trajet même lors des périodes de forte affluences.
 
 ## Méthodes pour récupérer les trajets directs
 
@@ -16,17 +16,18 @@ l'étape la plus rapide et la plus facile à réaliser.
 ## Trajets indirects : la grande inconnue
 
 Cependant, il n'était pas possible de récupérer les trajets qui comprenaient une ou plusieurs correspondances. J'ai donc
-du trouver une méthode pour récupérer les trajets avec correspondances tout en prenant en compte qu'il fallait parfois
+dû trouver une méthode pour récupérer les trajets avec correspondances tout en prenant en compte qu'il fallait parfois
 provoquer volontairement celles-ci lorsque les trains directs sont complets et que l'on souhaite découper son trajet. De
-plus, il fallait tenir compte que les trajets proposés en correspondances étaient susceptibles d'être à bord de TERs (
-Trains Express Régionaux) qui ne sont pas éligibles à TGVmax. J'ai d'abord cherché les moyens d'obtenir les gares
+plus, il fallait tenir compte que les trajets proposés en correspondances étaient susceptibles d'être à bord de TERs 
+(Trains Express Régionaux) qui ne sont pas éligibles à TGVmax. J'ai d'abord cherché les moyens d'obtenir les gares
 intermédiaires communes entre les deux gares. J'étais déjà tombé sur l'outil direkt.bahn.guru qui permet d'afficher sur
-une carte intéractive l'ensemble des destinations atteignables à partir d'une gare.
-![Aperçu de l'outil https://direkt.bahn.guru/ qui affiche ici toutes les destinations accesibles depuis Paris Gare de Lyon](img.png)
+une carte interactive l'ensemble des destinations atteignables à partir d'une gare.
+![Aperçu de l'outil https://direkt.bahn.guru/ qui affiche ici toutes les destinations accessible depuis Paris Gare de Lyon](img.png)
 
 #### https://direkt.bahn.guru/?origin=8700012
 
-Après un reverse-engineering, j'ai identifié l'API utilisé pour obtenir les gares atteignables. Contre toute attente, la
-base de données utilisée provennait de HAFAS, un logiciel de calcul d'itinéraire. Le données quant à elles sont celles
-de la Deutsche Bahn, l'entreprise ferroviaire publique allemande, qui as accès à la base de données des circulations ferroviaire en France.
+Après une retro-ingénierie, j'ai identifié l'API utilisé pour obtenir les gares atteignables. Contre toute attente, la
+base de données utilisée provenait de HAFAS, un logiciel de calcul d'itinéraire. Les données quant à elles sont celles
+de la Deutsche Bahn, l'entreprise ferroviaire publique allemande, qui a accès à la base de données des gares
+ferroviaires en France.
 
