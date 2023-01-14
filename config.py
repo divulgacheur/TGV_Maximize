@@ -1,3 +1,6 @@
+"""
+Code related to .env config
+"""
 import os
 from typing import get_type_hints, Union
 

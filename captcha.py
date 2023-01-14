@@ -1,3 +1,6 @@
+"""
+Captcha resolver related code
+"""
 from json import loads
 from seleniumwire import webdriver
 

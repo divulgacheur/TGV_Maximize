@@ -7,5 +7,15 @@ setup(name='TGV_Maximize',
       description='CLI client to show all available tickets for MAXJeunes subscription',
       author='Divulgacheur',
       author_email='github@theopeltier.me',
-      packages=['alive-progress', 'argcomplete', 'argparse', 'chardet','distutils','pyhafas','pylint','python-dotenv', 'requests','Unidecode']
+      packages=['alive-progress',
+                'argcomplete',
+                'argparse',
+                'chardet',
+                'distutils',
+                'pyhafas',
+                'pylint',
+                'python-dotenv',
+                'requests',
+                'rich',
+                'Unidecode']
       )
