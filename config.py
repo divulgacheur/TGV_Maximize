@@ -1,10 +1,29 @@
+"""
+Code related to .env config
+"""
 import os
 from typing import get_type_hints, Union
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv,set_key
 
 load_dotenv()
 
+def dict_cookie_from_str(str_cookies):
+    d_cookies = {}
+    l_cookies = str_cookies.split("; ")
+    for key_item in l_cookies:
+        i = key_item.find("=")
+        key = key_item[:i]
+        item = key_item[i+1:]
+        d_cookies[key] = item
+    return d_cookies
+
+def str_cookies_from_dict(d_cookies):
+    str_cookie = ""
+    for key, item in d_cookies.items():
+        str_cookie += key + "="+ item + "; "
+    str_cookie = str_cookie[:-2]
+    return str_cookie
 
 class AppConfigError(Exception):
     """
@@ -56,6 +75,12 @@ class AppConfig:
 
     def __repr__(self):
         return str(self.__dict__)
+
+    @staticmethod
+    def update_cookies_from_dict(field, str_cookies):
+        set_key('.env',field, str_cookies)
+        print('new cookie added to .env:', str_cookies)
+
 
 
 # Expose Config object for app to import

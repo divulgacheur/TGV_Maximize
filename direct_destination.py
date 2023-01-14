@@ -1,3 +1,6 @@
+"""
+Code related to direct destinations accessible from train station
+"""
 from operator import itemgetter
 from requests import get, Response as ReqResponse
 
@@ -39,9 +42,9 @@ class DirectDestination:
     def get_common_stations(departure_direct_destinations: 'DirectDestination',
                             arrival_direct_destinations: 'DirectDestination') -> [Station]:
         """
-        Returns a list of stations that are common to both the departure and arrival stations.
-        :param departure_direct_destinations: The departure station's direct destinations.
-        :param arrival_direct_destinations: The arrival station's direct destinations.
+        Returns a list of stations that are common to both the departure and arrival stations
+        :param departure_direct_destinations: The departure station's direct destinations
+        :param arrival_direct_destinations: The arrival station's direct destinations
         :return: A list of stations
         """
 
@@ -59,7 +62,7 @@ class DirectDestination:
         """
         Returns the direct destinations of a given station.
         """
-        response = get('https://api.direkt.bahn.guru/' + departure.identifier)
+        response = get('https://api.direkt.bahn.guru/' + departure.identifier, timeout=15)
         if response.status_code != 200:
             print()
             raise ValueError(f'{departure.name} identifier not found is UIC database.'
